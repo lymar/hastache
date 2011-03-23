@@ -11,7 +11,7 @@
 
 {- | Haskell implementation of Mustache templates
 
-See homepage for examples: <http://github.com/lymar/hastache>
+See homepage for examples of usage: <http://github.com/lymar/hastache>
 -}
 module Text.Hastache (
       hastacheStr

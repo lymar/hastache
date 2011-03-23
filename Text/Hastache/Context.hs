@@ -35,7 +35,7 @@ mkStrContext :: Monad m => (String -> MuType m) -> MuContext m
 mkStrContext f a = decodeStr a ~> f
 
 {- | 
-Make Hastache context from Data
+Make Hastache context from Data.Data deriving type
 
 @
 data InternalData = InternalData {
