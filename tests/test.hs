@@ -262,6 +262,9 @@ genericContextTest = do
         \text 1\n\
         \{{someDataField1}} {{someDataInternal.intDataField1}} \n\
         \{{someDataInternal.intDataField2}} \n\
+        \{{#someDataInternal}}\n\
+        \* {{intDataField1}} {{intDataField2}} \n\
+        \{{/someDataInternal}}\n\
         \Simple list:\n\
         \{{#someDataList}}\n\
         \* {{.}} \n\
@@ -285,6 +288,7 @@ genericContextTest = do
         \text 1\n\
         \aaa zzz \n\
         \100 \n\
+        \* zzz 100 \n\
         \Simple list:\n\
         \* 1 \n\
         \* 2 \n\

@@ -58,6 +58,7 @@ example = hastacheStr defaultConfig (encodeStr template)
         \"string: {{stringField}} \\n\",
         \"int: {{intField}} \\n\",
         \"data: {{dataField.someField}}, {{dataField.anotherField}} \\n\",
+        \"data: {{#dataField}}{{someField}}, {{anotherField}}{{/dataField}} \\n\",
         \"simple list: {{#simpleListField}}{{.}} {{/simpleListField}} \\n\",
         \"data list: \\n\",
         \"{{#dataListField}}\\n\",
@@ -73,6 +74,7 @@ Result:
 @
 string: string value 
 int: 1 
+data: val, 123 
 data: val, 123 
 simple list: a b c  
 data list: 
@@ -129,7 +131,9 @@ convertGenTempToContext :: TD t -> MuContext t
 convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
     where
     mkMap name m (TSimple t) = Map.insert (encodeStr name) t m
-    mkMap name m (TObj lst) = foldl (foldTObj name) m lst
+    mkMap name m (TObj lst) = foldl (foldTObj name) m lst ~>
+        Map.insert (encodeStr name) 
+        ([foldl (foldTObj "") Map.empty lst ~> mkMapContext] ~> MuList)
     mkMap name m (TList lst) = Map.insert (encodeStr name) 
         (map convertGenTempToContext lst ~> MuList) m
     mkMap _ m _ = m
