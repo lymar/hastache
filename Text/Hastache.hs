@@ -149,7 +149,7 @@ htmlEscape str = LZ.unpack str ~> proc ~> LZ.pack
     proc :: [Word8] -> [Word8]
     proc (h:t)
         | h == ord8 '&' = stp "&amp;" t
-        | h == ord8 '\\'= stp "\\\\" t
+        | h == ord8 '\\'= stp "&#92;" t
         | h == ord8 '"' = stp "&quot;" t
         | h == ord8 '\''= stp "&#39;" t
         | h == ord8 '<' = stp "&lt;" t

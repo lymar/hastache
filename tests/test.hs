@@ -51,7 +51,7 @@ variablesTest = do
     context "ByteString" = MuVariable (encodeStr "hello - привет")
     context "Text" = MuVariable (T.pack "hello - привет")
     context "String" = MuVariable "hello - привет"
-    context "HtmlString" = MuVariable "<p>text</p>"
+    context "HtmlString" = MuVariable "<p>text (\\)</p>"
     
     testRes  = "\
         \   Char:               [ Й ]            \n\
@@ -60,9 +60,9 @@ variablesTest = do
         \   ByteString:         [ hello - привет ]      \n\
         \   Text:               [ hello - привет ]            \n\
         \   String:             [ hello - привет ]          \n\
-        \   HtmlString:         [ &lt;p&gt;text&lt;/p&gt; ]      \n\
-        \   HtmlStringUnEsc:    [ <p>text</p> ]    \n\
-        \   HtmlStringUnEsc2:   [ <p>text</p> ]     \n\
+        \   HtmlString:         [ &lt;p&gt;text (&#92;)&lt;/p&gt; ]      \n\
+        \   HtmlStringUnEsc:    [ <p>text (\\)</p> ]    \n\
+        \   HtmlStringUnEsc2:   [ <p>text (\\)</p> ]     \n\
         \"
 
 -- Show/hide block according to list state
