@@ -22,7 +22,8 @@ tests :: [Test]
 tests =
     [
         testGroup "Lambdas" [
-            testCase "Simple Lambda" test_lambdaSection
+            testCase "Simple Lambda" test_lambdaSection,
+            testCase "Monadic Lambda" test_lambdaMonadSection
         ]
     ]
 
@@ -40,6 +41,7 @@ test_lambdaSection = do
         \"
     context "human" = MuVariable "You"
     context "function" = MuLambda BS.reverse
+    context _ = MuVariable ""
     
     testRes = "\
         \text 1\n\
@@ -47,8 +49,31 @@ test_lambdaSection = do
         \text 2\n\
         \"
 
-test_stub :: Assertion
-test_stub = return ()
+-- Transform section with monadic function
+test_lambdaMonadSection = do
+    (res, writerState) <- runWriterT monadicFunction
+    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr "monad state correctness" (decodeStr writerState)
+        testMonad
+    where
+    monadicFunction = do
+        res <- hastacheStr defaultConfig (encodeStr template) 
+            (mkStrContext context)
+        return res
+    template = "\
+        \[{{#mf}}{{abc}}{{/mf}}]\n\
+        \[{{#mf}}def{{/mf}}]\n\
+        \"
+    context "abc" = MuVariable "abc"
+    context "mf" = MuLambdaM $ \i -> do
+        tell i
+        return $ BS.reverse i
+    testRes = "\
+        \[cba]\n\
+        \[fed]\n\
+        \"
+    testMonad = "abcdef"
+
 
 assertEqualStr preface expected actual =
     unless (actual == expected) (assertFailure msg)
