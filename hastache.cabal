@@ -1,46 +1,37 @@
-name:            hastache
-version:         0.1.3
-license:         BSD3
-license-file:    LICENSE
-category:        Text
-copyright:       Sergey S Lymar (c) 2011
-author:          Sergey S Lymar <sergey.lymar@gmail.com>
-maintainer:      Sergey S Lymar <sergey.lymar@gmail.com>
-stability:       experimental
-tested-with:     GHC == 7.0.2
-synopsis:        Haskell implementation of Mustache templates
-cabal-version:   >= 1.8
-homepage:        http://github.com/lymar/hastache
-bug-reports:     http://github.com/lymar/hastache/issues
-build-type:      Simple
-description:
-    Haskell implementation of Mustache templates (<http://mustache.github.com/>).
-    .
-    See homepage for examples of usage: <http://github.com/lymar/hastache>
+name:                hastache
+version:             0.1.3.1
+license:             BSD3
+license-file:        LICENSE
+category:            Text
+copyright:           Sergey S Lymar (c) 2011
+author:              Sergey S Lymar <sergey.lymar@gmail.com>
+maintainer:          Sergey S Lymar <sergey.lymar@gmail.com>
+stability:           experimental
+tested-with:         GHC == 7.0.2
+synopsis:            Haskell implementation of Mustache templates
+cabal-version:       >= 1.8
+homepage:            http://github.com/lymar/hastache
+bug-reports:         http://github.com/lymar/hastache/issues
+build-type:          Simple
+description:         Haskell implementation of Mustache templates (<http://mustache.github.com/>).
+extra-source-files:  tests/partFile
+data-files:          tests/partFile
 
-extra-source-files:
-    tests/partFile
-    tests/RunTest.sh
-    tests/test.hs
-    README.markdown
-    
 library
-  exposed-modules:
-    Text.Hastache
-    Text.Hastache.Context
-
-  build-depends:
-    base == 4.*
-    ,bytestring
-    ,mtl
-    ,directory
-    ,filepath
-    ,utf8-string
-    ,text
-    ,containers
-    ,syb
+  build-depends:    base == 4.*, bytestring, mtl, directory, filepath, utf8-string, text, containers, syb
+  hs-source-dirs:   src
+  exposed-modules:  Text.Hastache, Text.Hastache.Context
 
 source-repository head
-  type:     git
-  location: http://github.com/lymar/hastache
+  type:      git
+  location:  http://github.com/lymar/hastache
+
+test-suite tests
+  type:            exitcode-stdio-1.0
+  x-uses-tf:       true
+  build-depends:   base >= 4, HUnit >= 1.2 && < 2, QuickCheck >= 2.4, test-framework >= 0.4.1, test-framework-quickcheck2, test-framework-hunit, syb, mtl, text, bytestring, utf8-string, directory, filepath, containers
+  ghc-options:     -Wall -rtsopts
+  main-is:         Main.hs
+  hs-source-dirs:  src, test
+  other-modules:   Old
 

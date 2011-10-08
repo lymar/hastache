@@ -277,9 +277,15 @@ renderBlock context symb inTag afterClose otag ctag conf
                             processBlock sectionContent
                                 context otag ctag conf
                             next afterSection
+--                    MuLambda func -> 
+--                        if normalSection then do
+--                            func sectionContent ~> tellBS
+--                            next afterSection
+--                        else do next afterSection
                     MuLambda func -> 
                         if normalSection then do
-                            func sectionContent ~> tellBS
+                            res <- lift $ hastacheStr conf sectionContent context
+                            tellBS $ func . encodeStr . decodeStrLBS $ res
                             next afterSection
                         else do next afterSection
                     MuLambdaM func -> 

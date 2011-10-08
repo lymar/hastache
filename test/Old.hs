@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Tests where
+module Old where
 
 import Test.HUnit
 import Text.Hastache
