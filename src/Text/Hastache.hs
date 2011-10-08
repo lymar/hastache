@@ -279,13 +279,15 @@ renderBlock context symb inTag afterClose otag ctag conf
                             next afterSection
                     MuLambda func -> 
                         if normalSection then do
-                            func sectionContent ~> tellBS
+                            res <- lift $ hastacheStr conf sectionContent context
+                            tellBS $ func . encodeStr . decodeStrLBS $ res
                             next afterSection
                         else do next afterSection
                     MuLambdaM func -> 
                         if normalSection then do
-                            res <- lift (func sectionContent)
-                            tellBS res
+                            res <- lift $ hastacheStr conf sectionContent context
+                            proc <- lift (func . encodeStr . decodeStrLBS $ res)
+                            tellBS $ proc
                             next afterSection
                         else do next afterSection
                     _ -> next afterSection
