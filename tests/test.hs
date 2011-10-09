@@ -1,16 +1,17 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Tests where
 
+import Control.Monad
+import Control.Monad.Writer
+import Data.Char
+import Data.Data
+import Data.Generics
 import Test.HUnit
 import Text.Hastache
 import Text.Hastache.Context
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LZ
 import qualified Data.Text as T
-import Control.Monad
-import Control.Monad.Writer
-import Data.Data
-import Data.Generics
 
 -- Hastache comments
 commentsTest = do
@@ -242,15 +243,17 @@ data InternalData = InternalData {
     intDataField1   :: String,
     intDataField2   :: Int
     }
-    deriving (Data, Typeable, Show)
+    deriving (Data, Typeable)
     
 data SomeData = SomeData {
     someDataField1      :: String,
     someDataInternal    :: InternalData,
     someDataList        :: [Int],
-    someDataObjList     :: [InternalData]
+    someDataObjList     :: [InternalData],
+    someMuLambdaBS      :: BS.ByteString -> BS.ByteString,
+    someMuLambdaS       :: String -> String
     }
-    deriving (Data, Typeable, Show)
+    deriving (Data, Typeable)
 
 -- Make hastache context from Data.Data deriving type
 genericContextTest = do
@@ -273,6 +276,8 @@ genericContextTest = do
         \{{#someDataObjList}}\n\
         \* {{intDataField1}} : {{intDataField2}} \n\
         \{{/someDataObjList}}\n\
+        \{{#someMuLambdaBS}}reverse{{/someMuLambdaBS}}\n\
+        \{{#someMuLambdaS}}upper{{/someMuLambdaS}}\n\
         \text 2\n\
         \"
     context = SomeData {
@@ -281,7 +286,9 @@ genericContextTest = do
             intDataField1 = "zzz", intDataField2 = 100 },
         someDataList = [1,2,3],
         someDataObjList = [InternalData "a" 1, InternalData "b" 2,
-            InternalData "c" 3]
+            InternalData "c" 3],
+        someMuLambdaBS = BS.reverse,
+        someMuLambdaS = map toUpper
         }
     
     testRes = "\
@@ -297,6 +304,8 @@ genericContextTest = do
         \* a : 1 \n\
         \* b : 2 \n\
         \* c : 3 \n\
+        \esrever\n\
+        \UPPER\n\
         \text 2\n\
         \"
 

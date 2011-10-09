@@ -1,5 +1,5 @@
 name:            hastache
-version:         0.1.3
+version:         0.1.4
 license:         BSD3
 license-file:    LICENSE
 category:        Text
@@ -7,7 +7,7 @@ copyright:       Sergey S Lymar (c) 2011
 author:          Sergey S Lymar <sergey.lymar@gmail.com>
 maintainer:      Sergey S Lymar <sergey.lymar@gmail.com>
 stability:       experimental
-tested-with:     GHC == 7.0.2
+tested-with:     GHC == 7.0.2, GHC == 7.0.3
 synopsis:        Haskell implementation of Mustache templates
 cabal-version:   >= 1.8
 homepage:        http://github.com/lymar/hastache

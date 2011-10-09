@@ -21,9 +21,9 @@ import Data.Word
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as LText
-import qualified Data.Map as Map
 
 import Text.Hastache
 
@@ -48,8 +48,10 @@ data Example = Example {
     intField        :: Int,
     dataField       :: InternalData,
     simpleListField :: [String],
-    dataListField   :: [InternalData]
-    } deriving (Data, Typeable, Show)
+    dataListField   :: [InternalData],
+    stringFunc      :: String -> String,
+    byteStringFunc  :: Data.ByteString.ByteString -> Data.ByteString.ByteString
+    } deriving (Data, Typeable)
 
 example = hastacheStr defaultConfig (encodeStr template) 
     (mkGenericContext context)
@@ -63,10 +65,14 @@ example = hastacheStr defaultConfig (encodeStr template)
         \"data list: \\n\",
         \"{{#dataListField}}\\n\",
         \" * {{someField}}, {{anotherField}} \\n\",
-        \"{{/dataListField}}\\n\"]
+        \"{{/dataListField}}\\n\",
+        \"{{#stringFunc}}upper{{/stringFunc}} \\n\",
+        \"{{#byteStringFunc}}reverse{{/byteStringFunc}} \\n\"]
     context = Example { stringField = \"string value\", intField = 1, 
         dataField = InternalData \"val\" 123, simpleListField = [\"a\",\"b\",\"c\"],
-        dataListField = [InternalData \"aaa\" 1, InternalData \"bbb\" 2] }
+        dataListField = [InternalData \"aaa\" 1, InternalData \"bbb\" 2],
+        stringFunc = map Data.Char.toUpper,
+        byteStringFunc = Data.ByteString.reverse }
 @
 
 Result:
@@ -80,6 +86,8 @@ simple list: a b c
 data list: 
  * aaa, 1 
  * bbb, 2 
+UPPER 
+esrever 
 @
 -}
 mkGenericContext :: (Monad m, Data a) => a -> MuContext m
@@ -121,11 +129,19 @@ procField =
     `extQ` (\(i::Text.Text)         -> MuVariable i ~> TSimple)
     `extQ` (\(i::LText.Text)        -> MuVariable i ~> TSimple)
     `extQ` (\(i::Bool)              -> MuBool i ~> TSimple)
+    `extQ` muLambdaBS
+    `extQ` muLambdaS
     where
     obj a = case dataTypeRep (dataTypeOf a) of
         AlgRep [c] -> toGenTemp a
         _ -> TUnknown
     list a = map procField a ~> TList
+    muLambdaBS :: (BS.ByteString -> BS.ByteString) -> TD m
+    muLambdaBS f = MuLambda f ~> TSimple
+    muLambdaS :: (String -> String) -> TD m
+    muLambdaS f = MuLambda fd ~> TSimple
+        where
+        fd s = decodeStr s ~> f ~> encodeStr 
 
 convertGenTempToContext :: TD t -> MuContext t
 convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
