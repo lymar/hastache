@@ -194,11 +194,25 @@ findBlock str otag ctag = do
 toLBS :: ByteString -> LZ.ByteString
 toLBS v = LZ.fromChunks [v]
 
-readVar context name = do
-    case context name of
-        MuVariable a -> toLByteString a
-        MuBool a -> show a ~> encodeStr ~> toLBS
-        _ -> LZ.empty
+-- | Runtime context   
+data MuRtCtx a b = MuRtCtx (MuContext a) (MuContext b)
+
+-- | Try to read variable from both contexts
+readVar :: MuRtCtx a b -> ByteString -> LZ.ByteString
+readVar (MuRtCtx l g) name =
+-- TODO need refactor
+    choose lVar gVar
+    where
+        lVar = extract $ l name
+        gVar = extract $ g name
+        extract a = case a of 
+            MuVariable a -> toLByteString a
+            MuBool a -> show a ~> encodeStr ~> toLBS
+            _ -> LZ.empty
+        choose lv gv 
+            | not (LZ.null lv) = lv
+            | not (LZ.null gv) = gv
+            | otherwise = LZ.empty
         
 findCloseSection :: ByteString -> ByteString -> ByteString -> ByteString
      -> Maybe (ByteString, ByteString)
@@ -218,7 +232,7 @@ trimAll str = span trimCharsTest str ~> snd ~> spanEnd trimCharsTest ~> fst
 tellBS :: (MonadWriter LZ.ByteString m) => ByteString -> m ()
 tellBS str = toLBS str ~> tell
 
-processBlock str context otag ctag conf = do
+processBlock str context otag ctag conf = 
     case findBlock str otag ctag of
         Just (pre, symb, inTag, afterClose) -> do
             tellBS pre
@@ -228,16 +242,19 @@ processBlock str context otag ctag conf = do
             tellBS str
             return ()
 
-renderBlock context symb inTag afterClose otag ctag conf
+-- TODO need context extraction
+renderBlock (MuRtCtx l g) symb inTag afterClose otag ctag conf
     -- comment
     | symb == ord8 '!' = next afterClose
     -- unescape variable
     | symb == ord8 '&' || (symb == ord8 '{' && otag == defOTag) = do
-        readVar context (tail inTag ~> trimAll) ~> tell
+        readVar (MuRtCtx l g) (tail inTag ~> trimAll) ~> tell
         next afterClose
     -- section. inverted section
     | symb == ord8 '#' || symb == ord8 '^' = 
-        let normalSection = symb == ord8 '#' in do
+        let 
+            normalSection = symb == ord8 '#'
+        in do
         case findCloseSection afterClose (tail inTag) otag ctag of
             Nothing -> next afterClose
             Just (sectionContent', afterSection') -> 
@@ -252,30 +269,30 @@ renderBlock context symb inTag afterClose otag ctag conf
                             then dropNL afterSection'
                             else afterSection'
                 in do
-                case context (tail inTag) of
+                case l (tail inTag) of
                     MuList [] -> 
                         if normalSection then do next afterSection
                         else do
                             processBlock sectionContent
-                                context otag ctag conf
+                                (MuRtCtx l g) otag ctag conf
                             next afterSection
                     MuList b -> 
                         if normalSection then do
                             mapM_ (\c -> processBlock sectionContent
-                                c otag ctag conf) b
+                                (MuRtCtx c g) otag ctag conf) b
                             next afterSection
                         else do next afterSection
                     MuBool True -> 
                         if normalSection then do
                             processBlock sectionContent
-                                context otag ctag conf
+                                (MuRtCtx l g) otag ctag conf
                             next afterSection
                         else do next afterSection
                     MuBool False -> 
                         if normalSection then do next afterSection
                         else do
                             processBlock sectionContent
-                                context otag ctag conf
+                                (MuRtCtx l g) otag ctag conf
                             next afterSection
                     MuLambda func -> 
                         if normalSection then do
@@ -304,7 +321,7 @@ renderBlock context symb inTag afterClose otag ctag conf
             case getDelimiter of
                 Nothing -> next afterClose
                 Just (newOTag, newCTag) -> 
-                    processBlock (trim' afterClose) context 
+                    processBlock (trim' afterClose) (MuRtCtx l g) 
                         newOTag newCTag conf
     -- partials
     | symb == ord8 '>' =
@@ -325,10 +342,10 @@ renderBlock context symb inTag afterClose otag ctag conf
             next (trim' afterClose)
     -- variable
     | otherwise = do
-        readVar context (trimAll inTag) ~> muEscapeFunc conf ~> tell
+        readVar (MuRtCtx l g) (trimAll inTag) ~> muEscapeFunc conf ~> tell
         next afterClose
     where
-    next t = processBlock t context otag ctag conf
+    next t = processBlock t (MuRtCtx l g) otag ctag conf
     trim' content = 
         dropWhile trimCharsTest content
         ~> \t -> if (length t > 0 && head t == ord8 '\n')
@@ -341,7 +358,9 @@ hastacheStr :: (MonadIO m) =>
     -> MuContext m      -- ^ Context
     -> m LZ.ByteString
 hastacheStr conf str context = 
-    execWriterT (processBlock str context defOTag defCTag conf)
+-- TODO Need context pack
+    execWriterT (processBlock str (MuRtCtx context context) 
+            defOTag defCTag conf)
 
 -- | Render Hastache template from file
 hastacheFile :: (MonadIO m) => 

@@ -318,8 +318,7 @@ data NestedData = NestedData {
 } deriving (Data, Typeable)
 
 nestedGenericContextTest = do
-    res <- hastacheStr defaultConfig (encodeStr template) 
-        (mkGenericContext context)
+    res <- hastacheStr defaultConfig (encodeStr template) context
     assertEqualStr "result correctness" (decodeStrLBS res) testRes
     where
     template = "\
@@ -330,7 +329,7 @@ nestedGenericContextTest = do
         \Nested variable : {{nested}}\n\
         \{{/items}}\n\
         \"
-    context = TopData {
+    context = mkGenericContext $ TopData {
         top = "TOP",
         items = [NestedData "NESTED_ONE",
                   NestedData "NESTED_TWO"]
