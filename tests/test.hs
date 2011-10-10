@@ -309,6 +309,45 @@ genericContextTest = do
         \text 2\n\
         \"
 
+data TopData = TopData {
+    topDataTop      :: String,
+    topDataItems    :: [NestedData]
+    }
+    deriving (Data, Typeable)
+
+data NestedData = NestedData {
+    nestedDataNested    :: String
+    }
+    deriving (Data, Typeable)
+
+nestedGenericContextTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) context
+    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    where
+    template = "\
+        \Top variable : {{topDataTop}}\n\
+        \{{#topDataItems}}\n\
+        \-- Nested section\n\
+        \Top variable : {{topDataTop}}\n\
+        \Nested variable : {{nestedDataNested}}\n\
+        \{{/topDataItems}}\n\
+        \"
+    context = mkGenericContext $ TopData {
+        topDataTop = "TOP",
+        topDataItems = [
+            NestedData "NESTED_ONE",
+            NestedData "NESTED_TWO"]
+    }
+    testRes = "\
+        \Top variable : TOP\n\
+        \-- Nested section\n\
+        \Top variable : TOP\n\
+        \Nested variable : NESTED_ONE\n\
+        \-- Nested section\n\
+        \Top variable : TOP\n\
+        \Nested variable : NESTED_TWO\n\
+        \"
+
 tests = TestList [
      TestLabel "Comments test" (TestCase commentsTest)
     ,TestLabel "Variables test" (TestCase variablesTest)
@@ -320,13 +359,15 @@ tests = TestList [
     ,TestLabel "Set delimiter test" (TestCase setDelimiterTest)
     ,TestLabel "Partials test" (TestCase partialsTest)
     ,TestLabel "Generic context test" (TestCase genericContextTest)
+    ,TestLabel "Nested generic context test" (TestCase nestedGenericContextTest)
     ]
 
 main = do
     runTestTT tests
 
-assertEqualStr preface expected actual =
+assertEqualStr preface actual expected =
     unless (actual == expected) (assertFailure msg)
-    where msg = (if null preface then "" else preface ++ "\n") ++
-             "expected: \n" ++ expected ++ "\nbut got: \n" ++ actual
+    where 
+    msg = (if null preface then "" else preface ++ "\n") ++
+        "expected: \n" ++ expected ++ "\nbut got: \n" ++ actual
 
