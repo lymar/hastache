@@ -105,8 +105,9 @@ data MuType m =
     MuList [MuContext m]                        |
     MuBool Bool                                 |
     MuLambda (ByteString -> ByteString)         |
-    MuLambdaM (ByteString -> m ByteString)
-    
+    MuLambdaM (ByteString -> m ByteString)      |
+    MuNothing
+
 instance Show (MuType m) where
     show (MuVariable a) = "MuVariable " ++ show a
     show (MuList _) = "MuList [..]"

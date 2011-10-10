@@ -161,7 +161,7 @@ convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
     
     mkMapContext m a = case Map.lookup a m of
         Nothing -> case Map.lookup BS.empty m of
-            Nothing -> MuVariable BS.empty
+            Nothing -> MuNothing
             Just a -> a
         Just a -> a
 
