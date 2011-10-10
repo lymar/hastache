@@ -242,7 +242,6 @@ processBlock str context otag ctag conf =
             tellBS str
             return ()
 
--- TODO need context extraction
 renderBlock (MuRtCtx l g) symb inTag afterClose otag ctag conf
     -- comment
     | symb == ord8 '!' = next afterClose
@@ -358,7 +357,6 @@ hastacheStr :: (MonadIO m) =>
     -> MuContext m      -- ^ Context
     -> m LZ.ByteString
 hastacheStr conf str context = 
--- TODO Need context pack
     execWriterT (processBlock str (MuRtCtx context context) 
             defOTag defCTag conf)
 
