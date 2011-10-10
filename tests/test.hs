@@ -290,7 +290,6 @@ genericContextTest = do
         someMuLambdaBS = BS.reverse,
         someMuLambdaS = map toUpper
         }
-    
     testRes = "\
         \text 1\n\
         \aaa zzz \n\
@@ -309,6 +308,42 @@ genericContextTest = do
         \text 2\n\
         \"
 
+data TopData = TopData {
+    top :: String,
+    items :: [NestedData]
+} deriving (Data, Typeable)
+
+data NestedData = NestedData {
+    nested :: String
+} deriving (Data, Typeable)
+
+nestedGenericContextTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) context
+    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    where
+    template = "\
+        \Top variable : {{top}}\n\
+        \{{#items}}\n\
+        \-- Nested section\n\
+        \Top variable : {{top}}\n\
+        \Nested variable : {{nested}}\n\
+        \{{/items}}\n\
+        \"
+    context = mkGenericContext $ TopData {
+        top = "TOP",
+        items = [NestedData "NESTED_ONE",
+                  NestedData "NESTED_TWO"]
+    }
+    testRes = "\
+        \Top variable : TOP\n\
+        \-- Nested section\n\
+        \Top variable : TOP\n\
+        \Nested variable : NESTED_ONE\n\
+        \-- Nested section\n\
+        \Top variable : TOP\n\
+        \Nested variable : NESTED_TWO\n\
+        \"
+
 tests = TestList [
      TestLabel "Comments test" (TestCase commentsTest)
     ,TestLabel "Variables test" (TestCase variablesTest)
@@ -320,6 +355,7 @@ tests = TestList [
     ,TestLabel "Set delimiter test" (TestCase setDelimiterTest)
     ,TestLabel "Partials test" (TestCase partialsTest)
     ,TestLabel "Generic context test" (TestCase genericContextTest)
+    ,TestLabel "Nested context test" (TestCase nestedGenericContextTest)
     ]
 
 main = do
