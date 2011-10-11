@@ -309,9 +309,34 @@ genericContextTest = do
         \text 2\n\
         \"
 
+-- Up-level context from nested block
+nestedContextTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) 
+        (mkStrContext context)
+    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    where
+    template = "\
+        \{{top}}\n\
+        \{{#section}}\n\
+        \ * {{val}}. {{top}}\n\
+        \{{/section}}\n\
+        \"
+    context "section" = MuList $ map elemCtx ["elem 1", "elem 2"]
+    context "top" = MuVariable "top"
+    elemCtx vl = mkStrContext (\v -> case v of 
+        "val" -> MuVariable vl
+        _ -> MuNothing
+        )
+
+    testRes = "\
+        \top\n\
+        \ * elem 1. top\n\
+        \ * elem 2. top\n\
+        \"
+
 data TopData = TopData {
-    topDataTop      :: String,
-    topDataItems    :: [NestedData]
+    topDataTop          :: String,
+    topDataItems        :: [NestedData]
     }
     deriving (Data, Typeable)
 
@@ -320,6 +345,7 @@ data NestedData = NestedData {
     }
     deriving (Data, Typeable)
 
+-- Up-level context from nested block (Generic version)
 nestedGenericContextTest = do
     res <- hastacheStr defaultConfig (encodeStr template) context
     assertEqualStr "result correctness" (decodeStrLBS res) testRes
@@ -359,6 +385,7 @@ tests = TestList [
     ,TestLabel "Set delimiter test" (TestCase setDelimiterTest)
     ,TestLabel "Partials test" (TestCase partialsTest)
     ,TestLabel "Generic context test" (TestCase genericContextTest)
+    ,TestLabel "Nested context test" (TestCase nestedContextTest)
     ,TestLabel "Nested generic context test" (TestCase nestedGenericContextTest)
     ]
 
