@@ -56,18 +56,18 @@ data Example = Example {
 example = hastacheStr defaultConfig (encodeStr template) 
     (mkGenericContext context)
     where
-    template = concat [
-        \"string: {{stringField}} \\n\",
-        \"int: {{intField}} \\n\",
-        \"data: {{dataField.someField}}, {{dataField.anotherField}} \\n\",
-        \"data: {{#dataField}}{{someField}}, {{anotherField}}{{/dataField}} \\n\",
-        \"simple list: {{#simpleListField}}{{.}} {{/simpleListField}} \\n\",
-        \"data list: \\n\",
-        \"{{#dataListField}}\\n\",
-        \" * {{someField}}, {{anotherField}} \\n\",
-        \"{{/dataListField}}\\n\",
-        \"{{#stringFunc}}upper{{/stringFunc}} \\n\",
-        \"{{#byteStringFunc}}reverse{{/byteStringFunc}} \\n\"]
+    template = concat $ map (++ \"\\n\") [
+        \"string: {{stringField}}\",
+        \"int: {{intField}}\",
+        \"data: {{dataField.someField}}, {{dataField.anotherField}}\",
+        \"data: {{#dataField}}{{someField}}, {{anotherField}}{{/dataField}}\",
+        \"simple list: {{#simpleListField}}{{.}} {{/simpleListField}}\",
+        \"data list:\",
+        \"{{#dataListField}}\",
+        \" * {{someField}}, {{anotherField}}. top level var: {{intField}}\",
+        \"{{/dataListField}}\",
+        \"{{#stringFunc}}upper{{/stringFunc}}\",
+        \"{{#byteStringFunc}}reverse{{/byteStringFunc}}\"]
     context = Example { stringField = \"string value\", intField = 1, 
         dataField = InternalData \"val\" 123, simpleListField = [\"a\",\"b\",\"c\"],
         dataListField = [InternalData \"aaa\" 1, InternalData \"bbb\" 2],
@@ -84,8 +84,8 @@ data: val, 123
 data: val, 123 
 simple list: a b c  
 data list: 
- * aaa, 1 
- * bbb, 2 
+ * aaa, 1. top level var: 1 
+ * bbb, 2. top level var: 1 
 UPPER 
 esrever 
 @
