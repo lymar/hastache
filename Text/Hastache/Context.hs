@@ -160,8 +160,14 @@ convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
     foldTObj name m (fn, fv) = mkMap (mkName name fn) m fv
     
     mkMapContext m a = case Map.lookup a m of
-        Nothing -> case Map.lookup BS.empty m of
-            Nothing -> MuNothing
-            Just a -> a
+        Nothing -> 
+            case a == dotBS of
+                True -> 
+                    case Map.lookup BS.empty m of
+                        Nothing -> MuNothing
+                        Just a -> a
+                _ -> MuNothing
         Just a -> a
+
+dotBS = encodeStr "."
 
