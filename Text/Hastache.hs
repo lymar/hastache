@@ -358,7 +358,7 @@ hastacheStr conf str context =
 -- | Render Hastache template from file
 hastacheFile :: (MonadIO m) => 
     MuConfig            -- ^ Configuration
-    -> String           -- ^ Template file name
+    -> FilePath         -- ^ Template file name
     -> MuContext m      -- ^ Context
     -> m LZ.ByteString
 hastacheFile conf file_name context = do
