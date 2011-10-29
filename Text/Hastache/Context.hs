@@ -90,7 +90,7 @@ UPPER
 esrever 
 @
 -}
-mkGenericContext :: (Monad m, Data a) => a -> MuContext m
+mkGenericContext :: (Monad m, Data a, Typeable1 m) => a -> MuContext m
 mkGenericContext val = toGenTemp val ~> convertGenTempToContext
     
 data TD m = 
@@ -100,12 +100,12 @@ data TD m =
     | TUnknown
     deriving (Show)
 
-toGenTemp :: (Data a, Monad m) => a -> TD m
+toGenTemp :: (Data a, Monad m, Typeable1 m) => a -> TD m
 toGenTemp a = zip fields (gmapQ procField a) ~> TObj
     where
     fields = toConstr a ~> constrFields
 
-procField :: (Data a, Monad m) => a -> TD m
+procField :: (Data a, Monad m, Typeable1 m) => a -> TD m
 procField = 
     obj
     `ext1Q` list
@@ -131,11 +131,14 @@ procField =
     `extQ` (\(i::Bool)              -> MuBool i ~> TSimple)
     `extQ` muLambdaBS
     `extQ` muLambdaS
+    `extQ` muLambdaBSIO
     where
     obj a = case dataTypeRep (dataTypeOf a) of
         AlgRep [c] -> toGenTemp a
         _ -> TUnknown
     list a = map procField a ~> TList
+    muLambdaBSIO :: (BS.ByteString -> m BS.ByteString) -> TD m
+    muLambdaBSIO f = MuLambdaM f ~> TSimple
     muLambdaBS :: (BS.ByteString -> BS.ByteString) -> TD m
     muLambdaBS f = MuLambda f ~> TSimple
     muLambdaS :: (String -> String) -> TD m
