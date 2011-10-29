@@ -1,1 +1,4 @@
 /dist
+/.project
+/.hsproject
+/.dist-scion

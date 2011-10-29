@@ -334,6 +334,7 @@ nestedContextTest = do
         \ * elem 2. top\n\
         \"
 
+-- Up-level context from nested block (Generic version)
 data TopData = TopData {
     topDataTop          :: String,
     topDataItems        :: [NestedData]
@@ -345,7 +346,6 @@ data NestedData = NestedData {
     }
     deriving (Data, Typeable)
 
--- Up-level context from nested block (Generic version)
 nestedGenericContextTest = do
     res <- hastacheStr defaultConfig (encodeStr template) context
     assertEqualStr "result correctness" (decodeStrLBS res) testRes
@@ -374,6 +374,39 @@ nestedGenericContextTest = do
         \Nested variable : NESTED_TWO\n\
         \"
 
+-- Modadic lamda in generic context
+
+data CtxWithLambdaM = CtxWithLambdaM {
+    lMone :: String,
+    lMLamb ::  BS.ByteString -> BS.ByteString,
+    lMLambM ::  BS.ByteString -> IO BS.ByteString
+} deriving (Data, Typeable)
+
+genericContextLamdaMTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) context
+    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    where
+    template = "\
+        \{{lMone}}\
+        \{{#lMLamb}}\n\
+        \In normal lambda\n\
+        \{{/lMLamb}}\n\
+        \{{#lMLambM}}\n\
+        \In IO lambda\n\
+        \{{/lMLambM}}\n\n\
+        \"
+    context = mkGenericContext $ CtxWithLambdaM {
+        lMone = "ONE",
+        lMLamb = BS.reverse, 
+        lMLambM = (\s -> do
+            return $ BS.reverse s) 
+    }
+    testRes = "\
+        \ONE\n\
+        \adbmal lamron nI\n\
+        \adbmal OI nI\n\
+        \"
+
 tests = TestList [
      TestLabel "Comments test" (TestCase commentsTest)
     ,TestLabel "Variables test" (TestCase variablesTest)
@@ -387,6 +420,7 @@ tests = TestList [
     ,TestLabel "Generic context test" (TestCase genericContextTest)
     ,TestLabel "Nested context test" (TestCase nestedContextTest)
     ,TestLabel "Nested generic context test" (TestCase nestedGenericContextTest)
+    ,TestLabel "Generic context LambdaM" (TestCase genericContextLamdaMTest)
     ]
 
 main = do
