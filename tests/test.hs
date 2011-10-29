@@ -1,9 +1,8 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveFunctor #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 module Tests where
 
 import Control.Monad
 import Control.Monad.Writer
-import Control.Monad.Writer.Lazy (liftIO, MonadIO)
 import Data.Char
 import Data.Data
 import Data.Generics
