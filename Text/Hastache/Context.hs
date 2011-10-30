@@ -44,13 +44,15 @@ data InternalData = InternalData {
     } deriving (Data, Typeable, Show)
 
 data Example = Example {
-    stringField     :: String,
-    intField        :: Int,
-    dataField       :: InternalData,
-    simpleListField :: [String],
-    dataListField   :: [InternalData],
-    stringFunc      :: String -> String,
-    byteStringFunc  :: Data.ByteString.ByteString -> Data.ByteString.ByteString
+    stringField             :: String,
+    intField                :: Int,
+    dataField               :: InternalData,
+    simpleListField         :: [String],
+    dataListField           :: [InternalData],
+    stringFunc              :: String -> String,
+    byteStringFunc          :: Data.ByteString.ByteString -> Data.ByteString.ByteString,
+    monadicStringFunc       :: String -> IO String,
+    monadicByteStringFunc   :: Data.ByteString.ByteString -> IO Data.ByteString.ByteString
     } deriving (Data, Typeable)
 
 example = hastacheStr defaultConfig (encodeStr template) 
@@ -67,12 +69,18 @@ example = hastacheStr defaultConfig (encodeStr template)
         \" * {{someField}}, {{anotherField}}. top level var: {{intField}}\",
         \"{{/dataListField}}\",
         \"{{#stringFunc}}upper{{/stringFunc}}\",
-        \"{{#byteStringFunc}}reverse{{/byteStringFunc}}\"]
+        \"{{#byteStringFunc}}reverse{{/byteStringFunc}}\",
+        \"{{#monadicStringFunc}}upper (monadic){{/monadicStringFunc}}\",
+        \"{{#monadicByteStringFunc}}reverse (monadic){{/monadicByteStringFunc}}\"]
     context = Example { stringField = \"string value\", intField = 1, 
         dataField = InternalData \"val\" 123, simpleListField = [\"a\",\"b\",\"c\"],
         dataListField = [InternalData \"aaa\" 1, InternalData \"bbb\" 2],
         stringFunc = map Data.Char.toUpper,
-        byteStringFunc = Data.ByteString.reverse }
+        byteStringFunc = Data.ByteString.reverse,
+        monadicStringFunc = return . map Data.Char.toUpper,
+        monadicByteStringFunc = return . Data.ByteString.reverse }
+
+main = example >>= Data.ByteString.Lazy.putStrLn
 @
 
 Result:
@@ -88,6 +96,8 @@ data list:
  * bbb, 2. top level var: 1 
 UPPER 
 esrever 
+UPPER (MONADIC)
+)cidanom( esrever
 @
 -}
 mkGenericContext :: (Monad m, Data a, Typeable1 m) => a -> MuContext m
