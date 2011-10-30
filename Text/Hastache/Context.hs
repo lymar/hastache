@@ -131,16 +131,25 @@ procField =
     `extQ` (\(i::Bool)              -> MuBool i ~> TSimple)
     `extQ` muLambdaBS
     `extQ` muLambdaS
-    `extQ` muLambdaBSIO
+    `extQ` muLambdaMBS
+    `extQ` muLambdaMS
     where
     obj a = case dataTypeRep (dataTypeOf a) of
         AlgRep [c] -> toGenTemp a
         _ -> TUnknown
     list a = map procField a ~> TList
-    muLambdaBSIO :: (BS.ByteString -> m BS.ByteString) -> TD m
-    muLambdaBSIO f = MuLambdaM f ~> TSimple
+
+    muLambdaMBS :: (BS.ByteString -> m BS.ByteString) -> TD m
+    muLambdaMBS f = MuLambdaM f ~> TSimple
+
+    muLambdaMS :: forall m. Monad m => (String -> m String) -> TD m
+    muLambdaMS f = MuLambdaM fd ~> TSimple
+        where
+        fd s = decodeStr s ~> f >>= return . encodeStr
+
     muLambdaBS :: (BS.ByteString -> BS.ByteString) -> TD m
     muLambdaBS f = MuLambda f ~> TSimple
+
     muLambdaS :: (String -> String) -> TD m
     muLambdaS f = MuLambda fd ~> TSimple
         where
