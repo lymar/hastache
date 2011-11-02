@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, FlexibleInstances, FlexibleContexts,
+{-# LANGUAGE ExistentialQuantification, FlexibleInstances, 
     IncoherentInstances #-}
 -- Module:      Text.Hastache
 -- Copyright:   Sergey S Lymar (c) 2011 
@@ -16,6 +16,8 @@ See homepage for examples of usage: <http://github.com/lymar/hastache>
 module Text.Hastache (
       hastacheStr
     , hastacheFile
+    , hastacheStrBuilder
+    , hastacheFileBuilder
     , MuContext
     , MuType(..)
     , MuConfig(..)
@@ -30,24 +32,26 @@ module Text.Hastache (
     ) where 
 
 import Control.Monad (guard, when)
-import Control.Monad.Trans (lift)
-import Control.Monad.Writer.Lazy (tell, liftIO, MonadIO, execWriterT,
-    MonadWriter)
+import Control.Monad.Reader (ask, runReaderT, MonadReader, ReaderT)
+import Control.Monad.Trans (lift, liftIO, MonadIO)
 import Data.ByteString hiding (map, foldl1)
 import Data.Char (ord)
 import Data.Int
+import Data.IORef
 import Data.Maybe (isJust)
+import Data.Monoid (mappend, mempty)
 import Data.Word
 import Prelude hiding (putStrLn, readFile, length, drop, tail, dropWhile, elem,
     head, last, reverse, take, span)
 import System.Directory (doesFileExist)
 import System.FilePath (combine)
 
+import qualified Blaze.ByteString.Builder as BSB
 import qualified Codec.Binary.UTF8.String as SU
 import qualified Data.ByteString.Lazy as LZ
+import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as LText
-import qualified Data.List as List
 
 (~>) :: a -> (a -> b) -> b
 x ~> f = f $ x
@@ -69,19 +73,19 @@ instance MuVar LZ.ByteString where
     
 withShowToLBS a = show a ~> encodeStr ~> toLBS
 
-instance MuVar Integer where toLByteString = withShowToLBS
-instance MuVar Int where toLByteString = withShowToLBS
-instance MuVar Float where toLByteString = withShowToLBS
-instance MuVar Double where toLByteString = withShowToLBS
-instance MuVar Int8 where toLByteString = withShowToLBS
-instance MuVar Int16 where toLByteString = withShowToLBS
-instance MuVar Int32 where toLByteString = withShowToLBS
-instance MuVar Int64 where toLByteString = withShowToLBS
-instance MuVar Word where toLByteString = withShowToLBS
-instance MuVar Word8 where toLByteString = withShowToLBS
-instance MuVar Word16 where toLByteString = withShowToLBS
-instance MuVar Word32 where toLByteString = withShowToLBS
-instance MuVar Word64 where toLByteString = withShowToLBS
+instance MuVar Integer  where toLByteString = withShowToLBS
+instance MuVar Int      where toLByteString = withShowToLBS
+instance MuVar Float    where toLByteString = withShowToLBS
+instance MuVar Double   where toLByteString = withShowToLBS
+instance MuVar Int8     where toLByteString = withShowToLBS
+instance MuVar Int16    where toLByteString = withShowToLBS
+instance MuVar Int32    where toLByteString = withShowToLBS
+instance MuVar Int64    where toLByteString = withShowToLBS
+instance MuVar Word     where toLByteString = withShowToLBS
+instance MuVar Word8    where toLByteString = withShowToLBS
+instance MuVar Word16   where toLByteString = withShowToLBS
+instance MuVar Word32   where toLByteString = withShowToLBS
+instance MuVar Word64   where toLByteString = withShowToLBS
 
 instance MuVar Text.Text where 
     toLByteString t = Text.unpack t ~> encodeStr ~> toLBS
@@ -182,8 +186,11 @@ defOTag = encodeStr "{{"
 defCTag = encodeStr "}}"
 unquoteCTag = encodeStr "}}}"
 
-findBlock :: ByteString -> ByteString -> ByteString
-     -> Maybe (ByteString, Word8, ByteString, ByteString)
+findBlock :: 
+       ByteString 
+    -> ByteString 
+    -> ByteString
+    -> Maybe (ByteString, Word8, ByteString, ByteString)
 findBlock str otag ctag = do
     guard (length fnd > (length otag))
     Just (pre, symb, inTag, afterClose)
@@ -209,8 +216,12 @@ readVar (context:parentCtx) name =
         MuNothing -> readVar parentCtx name
         _ -> LZ.empty
 
-findCloseSection :: ByteString -> ByteString -> ByteString -> ByteString
-     -> Maybe (ByteString, ByteString)
+findCloseSection :: 
+       ByteString 
+    -> ByteString 
+    -> ByteString 
+    -> ByteString
+    -> Maybe (ByteString, ByteString)
 findCloseSection str name otag ctag = do
     guard (length after > 0)
     Just (before, drop (length close) after)
@@ -224,25 +235,52 @@ trimCharsTest = (`elem` (encodeStr " \t"))
 trimAll :: ByteString -> ByteString
 trimAll str = span trimCharsTest str ~> snd ~> spanEnd trimCharsTest ~> fst
 
-tellBS :: (MonadWriter LZ.ByteString m) => ByteString -> m ()
-tellBS str = toLBS str ~> tell
+addRes :: MonadIO m => LZ.ByteString -> ReaderT (IORef BSB.Builder) m ()
+addRes str = do
+    rf <- ask
+    b <- readIORef rf ~> liftIO
+    let l = mappend b (BSB.fromLazyByteString str)
+    writeIORef rf l ~> liftIO
+    return ()
 
+addResBS :: MonadIO m => ByteString -> ReaderT (IORef BSB.Builder) m ()
+addResBS str = toLBS str ~> addRes
+
+addResLZ :: MonadIO m => LZ.ByteString -> ReaderT (IORef BSB.Builder) m ()
+addResLZ = addRes
+
+processBlock :: MonadIO m => 
+       ByteString 
+    -> [ByteString -> MuType m] 
+    -> ByteString 
+    -> ByteString 
+    -> MuConfig 
+    -> ReaderT (IORef BSB.Builder) m ()
 processBlock str contexts otag ctag conf = do
     case findBlock str otag ctag of
         Just (pre, symb, inTag, afterClose) -> do
-            tellBS pre
+            addResBS pre
             renderBlock contexts symb inTag afterClose 
                 otag ctag conf
         Nothing -> do
-            tellBS str
+            addResBS str
             return ()
 
+renderBlock:: MonadIO m =>
+       [ByteString -> MuType m] 
+    -> Word8 
+    -> ByteString 
+    -> ByteString 
+    -> ByteString
+    -> ByteString 
+    -> MuConfig 
+    -> ReaderT (IORef BSB.Builder) m ()
 renderBlock contexts symb inTag afterClose otag ctag conf
     -- comment
     | symb == ord8 '!' = next afterClose
     -- unescape variable
     | symb == ord8 '&' || (symb == ord8 '{' && otag == defOTag) = do
-        readVar contexts (tail inTag ~> trimAll) ~> tell
+        readVar contexts (tail inTag ~> trimAll) ~> addResLZ
         next afterClose
     -- section. inverted section
     | symb == ord8 '#' || symb == ord8 '^' = 
@@ -291,13 +329,13 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                             next afterSection
                     Just (MuLambda func) -> 
                         if normalSection then do
-                            func sectionContent ~> tellBS
+                            func sectionContent ~> addResBS
                             next afterSection
                         else do next afterSection
                     Just (MuLambdaM func) -> 
                         if normalSection then do
                             res <- lift (func sectionContent)
-                            tellBS res
+                            addResBS res
                             next afterSection
                         else do next afterSection
                     _ -> next afterSection
@@ -337,7 +375,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
             next (trim' afterClose)
     -- variable
     | otherwise = do
-        readVar contexts (trimAll inTag) ~> muEscapeFunc conf ~> tell
+        readVar contexts (trimAll inTag) ~> muEscapeFunc conf ~> addResLZ
         next afterClose
     where
     next t = processBlock t contexts otag ctag conf
@@ -348,20 +386,40 @@ renderBlock contexts symb inTag afterClose otag ctag conf
 
 -- | Render Hastache template from ByteString
 hastacheStr :: (MonadIO m) => 
-    MuConfig            -- ^ Configuration
+       MuConfig         -- ^ Configuration
     -> ByteString       -- ^ Template
     -> MuContext m      -- ^ Context
     -> m LZ.ByteString
 hastacheStr conf str context = 
-    execWriterT (processBlock str [context] defOTag defCTag conf)
+    hastacheStrBuilder conf str context >>= return . BSB.toLazyByteString
 
 -- | Render Hastache template from file
 hastacheFile :: (MonadIO m) => 
-    MuConfig            -- ^ Configuration
+       MuConfig         -- ^ Configuration
     -> FilePath         -- ^ Template file name
     -> MuContext m      -- ^ Context
     -> m LZ.ByteString
-hastacheFile conf file_name context = do
-    str <- liftIO $ readFile file_name
-    hastacheStr conf str context
+hastacheFile conf file_name context = 
+    hastacheFileBuilder conf file_name context >>= return . BSB.toLazyByteString
+
+-- | Render Hastache template from ByteString
+hastacheStrBuilder :: (MonadIO m) => 
+       MuConfig         -- ^ Configuration
+    -> ByteString       -- ^ Template
+    -> MuContext m      -- ^ Context
+    -> m BSB.Builder
+hastacheStrBuilder conf str context = do
+    rf <- newIORef mempty ~> liftIO
+    runReaderT (processBlock str [context] defOTag defCTag conf) rf
+    readIORef rf ~> liftIO
+
+-- | Render Hastache template from file
+hastacheFileBuilder :: (MonadIO m) => 
+       MuConfig         -- ^ Configuration
+    -> FilePath         -- ^ Template file name
+    -> MuContext m      -- ^ Context
+    -> m BSB.Builder
+hastacheFileBuilder conf file_name context = do
+    str <- readFile file_name ~> liftIO
+    hastacheStrBuilder conf str context
 
