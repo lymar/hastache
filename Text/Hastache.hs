@@ -107,11 +107,11 @@ instance MuVar [Char] where
     toLByteString k = k ~> encodeStr ~> toLBS
     
 data MuType m = 
-    forall a. MuVar a => MuVariable a           |
-    MuList [MuContext m]                        |
-    MuBool Bool                                 |
-    MuLambda (ByteString -> ByteString)         |
-    MuLambdaM (ByteString -> m ByteString)      |
+    forall a. MuVar a => MuVariable a                   |
+    MuList [MuContext m]                                |
+    MuBool Bool                                         |
+    forall a. MuVar a => MuLambda (ByteString -> a)     |
+    forall a. MuVar a => MuLambdaM (ByteString -> m a)  |
     MuNothing
 
 instance Show (MuType m) where
@@ -329,13 +329,13 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                             next afterSection
                     Just (MuLambda func) -> 
                         if normalSection then do
-                            func sectionContent ~> addResBS
+                            func sectionContent ~> toLByteString ~> addResLZ
                             next afterSection
                         else do next afterSection
                     Just (MuLambdaM func) -> 
                         if normalSection then do
                             res <- lift (func sectionContent)
-                            addResBS res
+                            toLByteString res ~> addResLZ
                             next afterSection
                         else do next afterSection
                     _ -> next afterSection
