@@ -45,7 +45,7 @@ module Text.Hastache (
     , MuContext
     , MuType(..)
     , MuConfig(..)
-    , MuVar
+    , MuVar(..)
     , htmlEscape
     , emptyEscape
     , defaultConfig
