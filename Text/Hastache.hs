@@ -12,6 +12,30 @@
 {- | Haskell implementation of Mustache templates
 
 See homepage for examples of usage: <http://github.com/lymar/hastache>
+
+Simplest example:
+
+@
+module Main where 
+ 
+import Text.Hastache 
+import Text.Hastache.Context 
+import qualified Data.ByteString.Lazy as LZ 
+ 
+main = do 
+    res <- hastacheStr defaultConfig (encodeStr template)  
+        (mkStrContext context) 
+    LZ.putStrLn res 
+    where 
+    template = \"Hello, {{name}}!\" 
+    context \"name\" = MuVariable \"Haskell\"
+@
+
+Result:
+
+@
+Hello, Haskell!
+@
 -}
 module Text.Hastache (
       hastacheStr
