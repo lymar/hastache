@@ -99,6 +99,61 @@ esrever
 UPPER (MONADIC)
 )cidanom( esrever
 @
+
+Supported field types:
+
+ * String
+ 
+ * Char
+ 
+ * Double
+
+ * Float
+
+ * Int
+
+ * Int8
+
+ * Int16
+
+ * Int32
+
+ * Int64
+
+ * Integer
+
+ * Word
+
+ * Word8
+
+ * Word16
+
+ * Word32
+
+ * Word64
+
+ * Data.ByteString.ByteString
+
+ * Data.ByteString.Lazy.ByteString
+ 
+ * Data.Text.Text
+
+ * Data.Text.Lazy.Text
+ 
+ * Bool
+ 
+ * Data.ByteString.ByteString -> Data.ByteString.ByteString
+ 
+ * String -> String
+ 
+ * Data.ByteString.ByteString -> Data.ByteString.Lazy.ByteString
+ 
+ * MonadIO m => Data.ByteString.ByteString -> m Data.ByteString.ByteString
+ 
+ * MonadIO m => String -> m String
+ 
+ * MonadIO m => Data.ByteString.ByteString -> m Data.ByteString.Lazy.ByteString
+ 
 -}
 mkGenericContext :: (Monad m, Data a, Typeable1 m) => a -> MuContext m
 mkGenericContext val = toGenTemp val ~> convertGenTempToContext
@@ -139,31 +194,43 @@ procField =
     `extQ` (\(i::Text.Text)         -> MuVariable i ~> TSimple)
     `extQ` (\(i::LText.Text)        -> MuVariable i ~> TSimple)
     `extQ` (\(i::Bool)              -> MuBool i ~> TSimple)
-    `extQ` muLambdaBS
-    `extQ` muLambdaS
-    `extQ` muLambdaMBS
-    `extQ` muLambdaMS
+    
+    `extQ` muLambdaBSBS
+    `extQ` muLambdaSS
+    `extQ` muLambdaBSLBS
+    
+    `extQ` muLambdaMBSBS
+    `extQ` muLambdaMSS
+    `extQ` muLambdaMBSLBS
     where
     obj a = case dataTypeRep (dataTypeOf a) of
         AlgRep [c] -> toGenTemp a
         _ -> TUnknown
     list a = map procField a ~> TList
 
-    muLambdaMBS :: (BS.ByteString -> m BS.ByteString) -> TD m
-    muLambdaMBS f = MuLambdaM f ~> TSimple
+    muLambdaBSBS :: (BS.ByteString -> BS.ByteString) -> TD m
+    muLambdaBSBS f = MuLambda f ~> TSimple
 
-    muLambdaMS :: forall m. Monad m => (String -> m String) -> TD m
-    muLambdaMS f = MuLambdaM fd ~> TSimple
+    muLambdaSS :: (String -> String) -> TD m
+    muLambdaSS f = MuLambda fd ~> TSimple
         where
-        fd s = decodeStr s ~> f >>= return . encodeStr
+        fd s = decodeStr s ~> f
 
-    muLambdaBS :: (BS.ByteString -> BS.ByteString) -> TD m
-    muLambdaBS f = MuLambda f ~> TSimple
+    muLambdaBSLBS :: (BS.ByteString -> LBS.ByteString) -> TD m
+    muLambdaBSLBS f = MuLambda f ~> TSimple
 
-    muLambdaS :: (String -> String) -> TD m
-    muLambdaS f = MuLambda fd ~> TSimple
+    -- monadic
+
+    muLambdaMBSBS :: (BS.ByteString -> m BS.ByteString) -> TD m
+    muLambdaMBSBS f = MuLambdaM f ~> TSimple
+
+    muLambdaMSS :: (String -> m String) -> TD m
+    muLambdaMSS f = MuLambdaM fd ~> TSimple
         where
-        fd s = decodeStr s ~> f ~> encodeStr 
+        fd s = decodeStr s ~> f
+
+    muLambdaMBSLBS :: (BS.ByteString -> m LBS.ByteString) -> TD m
+    muLambdaMBSLBS f = MuLambdaM f ~> TSimple
 
 convertGenTempToContext :: TD t -> MuContext t
 convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
