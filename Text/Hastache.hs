@@ -16,26 +16,51 @@ See homepage for examples of usage: <http://github.com/lymar/hastache>
 Simplest example:
 
 @
-module Main where 
- 
 import Text.Hastache 
 import Text.Hastache.Context 
 import qualified Data.ByteString.Lazy as LZ 
- 
+
 main = do 
     res <- hastacheStr defaultConfig (encodeStr template)  
         (mkStrContext context) 
     LZ.putStrLn res 
     where 
-    template = \"Hello, {{name}}!\" 
+    template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\" 
     context \"name\" = MuVariable \"Haskell\"
+    context \"unread\" = MuVariable (100 :: Int)
 @
 
 Result:
 
 @
 Hello, Haskell!
+
+You have 100 unread messages.
 @
+
+Using Generics:
+
+@
+import Text.Hastache 
+import Text.Hastache.Context 
+import qualified Data.ByteString.Lazy as LZ 
+import Data.Data 
+import Data.Generics 
+ 
+data Info = Info { 
+    name    :: String, 
+    unread  :: Int 
+    } deriving (Data, Typeable)
+
+main = do 
+    res <- hastacheStr defaultConfig (encodeStr template) 
+        (mkGenericContext inf) 
+    LZ.putStrLn res 
+    where 
+    template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\"
+    inf = Info \"Haskell\" 100
+@
+
 -}
 module Text.Hastache (
       hastacheStr

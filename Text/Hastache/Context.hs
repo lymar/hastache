@@ -37,69 +37,6 @@ mkStrContext f a = decodeStr a ~> f
 {- | 
 Make Hastache context from Data.Data deriving type
 
-@
-data InternalData = InternalData {
-    someField       :: String,
-    anotherField    :: Int
-    } deriving (Data, Typeable, Show)
-
-data Example = Example {
-    stringField             :: String,
-    intField                :: Int,
-    dataField               :: InternalData,
-    simpleListField         :: [String],
-    dataListField           :: [InternalData],
-    stringFunc              :: String -> String,
-    byteStringFunc          :: Data.ByteString.ByteString -> Data.ByteString.ByteString,
-    monadicStringFunc       :: String -> IO String,
-    monadicByteStringFunc   :: Data.ByteString.ByteString -> IO Data.ByteString.ByteString
-    } deriving (Data, Typeable)
-
-example = hastacheStr defaultConfig (encodeStr template) 
-    (mkGenericContext context)
-    where
-    template = concat $ map (++ \"\\n\") [
-        \"string: {{stringField}}\",
-        \"int: {{intField}}\",
-        \"data: {{dataField.someField}}, {{dataField.anotherField}}\",
-        \"data: {{#dataField}}{{someField}}, {{anotherField}}{{/dataField}}\",
-        \"simple list: {{#simpleListField}}{{.}} {{/simpleListField}}\",
-        \"data list:\",
-        \"{{#dataListField}}\",
-        \" * {{someField}}, {{anotherField}}. top level var: {{intField}}\",
-        \"{{/dataListField}}\",
-        \"{{#stringFunc}}upper{{/stringFunc}}\",
-        \"{{#byteStringFunc}}reverse{{/byteStringFunc}}\",
-        \"{{#monadicStringFunc}}upper (monadic){{/monadicStringFunc}}\",
-        \"{{#monadicByteStringFunc}}reverse (monadic){{/monadicByteStringFunc}}\"]
-    context = Example { stringField = \"string value\", intField = 1, 
-        dataField = InternalData \"val\" 123, simpleListField = [\"a\",\"b\",\"c\"],
-        dataListField = [InternalData \"aaa\" 1, InternalData \"bbb\" 2],
-        stringFunc = map Data.Char.toUpper,
-        byteStringFunc = Data.ByteString.reverse,
-        monadicStringFunc = return . map Data.Char.toUpper,
-        monadicByteStringFunc = return . Data.ByteString.reverse }
-
-main = example >>= Data.ByteString.Lazy.putStrLn
-@
-
-Result:
-
-@
-string: string value 
-int: 1 
-data: val, 123 
-data: val, 123 
-simple list: a b c  
-data list: 
- * aaa, 1. top level var: 1 
- * bbb, 2. top level var: 1 
-UPPER 
-esrever 
-UPPER (MONADIC)
-)cidanom( esrever
-@
-
 Supported field types:
 
  * String
@@ -153,7 +90,80 @@ Supported field types:
  * MonadIO m => String -> m String
  
  * MonadIO m => Data.ByteString.ByteString -> m Data.ByteString.Lazy.ByteString
- 
+
+Example:
+
+@
+import Text.Hastache 
+import Text.Hastache.Context 
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LZ 
+import Data.Data 
+import Data.Generics 
+import Data.Char
+
+data InternalData = InternalData {
+    someField       :: String,
+    anotherField    :: Int
+    } deriving (Data, Typeable, Show)
+
+data Example = Example {
+    stringField             :: String,
+    intField                :: Int,
+    dataField               :: InternalData,
+    simpleListField         :: [String],
+    dataListField           :: [InternalData],
+    stringFunc              :: String -> String,
+    byteStringFunc          :: B.ByteString -> B.ByteString,
+    monadicStringFunc       :: String -> IO String,
+    monadicByteStringFunc   :: B.ByteString -> IO B.ByteString
+    } deriving (Data, Typeable)
+
+example = hastacheStr defaultConfig (encodeStr template) 
+    (mkGenericContext context)
+    where
+    template = concat $ map (++ \"\\n\") [
+        \"string: {{stringField}}\",
+        \"int: {{intField}}\",
+        \"data: {{dataField.someField}}, {{dataField.anotherField}}\",
+        \"data: {{#dataField}}{{someField}}, {{anotherField}}{{/dataField}}\",
+        \"simple list: {{#simpleListField}}{{.}} {{/simpleListField}}\",
+        \"data list:\",
+        \"{{#dataListField}}\",
+        \" * {{someField}}, {{anotherField}}. top level var: {{intField}}\",
+        \"{{/dataListField}}\",
+        \"{{#stringFunc}}upper{{/stringFunc}}\",
+        \"{{#byteStringFunc}}reverse{{/byteStringFunc}}\",
+        \"{{#monadicStringFunc}}upper (monadic){{/monadicStringFunc}}\",
+        \"{{#monadicByteStringFunc}}reverse (monadic){{/monadicByteStringFunc}}\"]
+    context = Example { stringField = \"string value\", intField = 1, 
+        dataField = InternalData \"val\" 123, simpleListField = [\"a\",\"b\",\"c\"],
+        dataListField = [InternalData \"aaa\" 1, InternalData \"bbb\" 2],
+        stringFunc = map toUpper,
+        byteStringFunc = B.reverse,
+        monadicStringFunc = return . map toUpper,
+        monadicByteStringFunc = return . B.reverse }
+
+main = example >>= LZ.putStrLn
+@
+
+Result:
+
+@
+string: string value 
+int: 1 
+data: val, 123 
+data: val, 123 
+simple list: a b c  
+data list: 
+ * aaa, 1. top level var: 1 
+ * bbb, 2. top level var: 1 
+UPPER 
+esrever 
+UPPER (MONADIC)
+)cidanom( esrever
+@
+
 -}
 mkGenericContext :: (Monad m, Data a, Typeable1 m) => a -> MuContext m
 mkGenericContext val = toGenTemp val ~> convertGenTempToContext
