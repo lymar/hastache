@@ -1,5 +1,5 @@
 name:            hastache
-version:         0.2.3
+version:         0.2.4
 license:         BSD3
 license-file:    LICENSE
 category:        Text
@@ -22,8 +22,8 @@ extra-source-files:
     tests/partFile
     tests/RunTest.sh
     tests/test.hs
-    README.markdown
-    
+    README.md
+
 library
   exposed-modules:
     Text.Hastache
