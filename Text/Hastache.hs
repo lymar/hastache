@@ -331,9 +331,9 @@ renderBlock contexts symb inTag afterClose otag ctag conf
     | symb == ord8 '&' || (symb == ord8 '{' && otag == defOTag) = do
         readVar contexts (tail inTag ~> trimAll) ~> addResLZ
         next afterClose
-    -- section. inverted section
-    | symb == ord8 '#' || symb == ord8 '^' = 
-        let normalSection = symb == ord8 '#' in do
+
+    -- section
+    | symb == ord8 '#' = do
         case findCloseSection afterClose (tail inTag) otag ctag of
             Nothing -> next afterClose
             Just (sectionContent', afterSection') -> 
@@ -350,44 +350,62 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                     tlInTag = tail inTag
                     readContext = map ($ tlInTag) contexts 
                         ~> List.find (not . isMuNothing)
-                in do
+                in 
                 case readContext of
-                    Just (MuList []) -> 
-                        if normalSection then do next afterSection
-                        else do
-                            processBlock sectionContent
-                                contexts otag ctag conf
-                            next afterSection
-                    Just (MuList b) -> 
-                        if normalSection then do
-                            mapM_ (\c -> processBlock sectionContent
-                                (c:contexts) otag ctag conf) b
-                            next afterSection
-                        else do next afterSection
-                    Just (MuBool True) -> 
-                        if normalSection then do
-                            processBlock sectionContent
-                                contexts otag ctag conf
-                            next afterSection
-                        else do next afterSection
-                    Just (MuBool False) -> 
-                        if normalSection then do next afterSection
-                        else do
-                            processBlock sectionContent
-                                contexts otag ctag conf
-                            next afterSection
-                    Just (MuLambda func) -> 
-                        if normalSection then do
-                            func sectionContent ~> toLByteString ~> addResLZ
-                            next afterSection
-                        else do next afterSection
-                    Just (MuLambdaM func) -> 
-                        if normalSection then do
-                            res <- lift (func sectionContent)
-                            toLByteString res ~> addResLZ
-                            next afterSection
-                        else do next afterSection
-                    _ -> next afterSection
+                    Just (MuList []) -> do
+                        next afterSection
+                    Just (MuList b) -> do
+                        mapM_ (\c -> processBlock sectionContent
+                            (c:contexts) otag ctag conf) b
+                        next afterSection
+                    Just (MuBool True) -> do
+                        processBlock sectionContent
+                            contexts otag ctag conf
+                        next afterSection
+                    Just (MuLambda func) -> do
+                        func sectionContent ~> toLByteString ~> addResLZ
+                        next afterSection
+                    Just (MuLambdaM func) -> do
+                        res <- lift (func sectionContent)
+                        toLByteString res ~> addResLZ
+                        next afterSection
+                    _ -> do
+                        next afterSection
+    
+    -- inverted section
+    | symb == ord8 '^' = do
+        case findCloseSection afterClose (tail inTag) otag ctag of
+            Nothing -> next afterClose
+            Just (sectionContent', afterSection') -> 
+                let 
+                    dropNL str = 
+                        if (length str) > 0 && (head str) == ord8 '\n' 
+                           then tail str
+                           else str
+                    sectionContent = dropNL sectionContent'
+                    afterSection = 
+                        if ord8 '\n' `elem` sectionContent
+                            then dropNL afterSection'
+                            else afterSection'
+                    tlInTag = tail inTag
+                    readContext = map ($ tlInTag) contexts 
+                        ~> List.find (not . isMuNothing)
+                in 
+                case readContext of
+                    Just (MuList []) -> do 
+                        processBlock sectionContent
+                            contexts otag ctag conf
+                        next afterSection
+                    Just (MuBool False) -> do 
+                        processBlock sectionContent
+                            contexts otag ctag conf
+                        next afterSection
+                    Nothing -> do
+                        processBlock sectionContent
+                            contexts otag ctag conf
+                        next afterSection
+                    _ -> do 
+                        next afterSection
     -- set delimiter
     | symb == ord8 '=' = 
         let
