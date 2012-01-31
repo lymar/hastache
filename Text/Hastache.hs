@@ -103,7 +103,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Lazy as LText
 
 (~>) :: a -> (a -> b) -> b
-x ~> f = f $ x
+x ~> f = f x
 infixl 9 ~>
 
 -- | Data for Hastache variable
@@ -146,10 +146,10 @@ instance MuVar Char where
     toLByteString a = (a : "") ~> encodeStr ~> toLBS
 
 instance MuVar a => MuVar [a] where
-    toLByteString a = (toLByteString '[') <+> cnvLst <+> (toLByteString ']')
+    toLByteString a = toLByteString '[' <+> cnvLst <+> toLByteString ']'
         where
-        cnvLst = (map toLByteString a) ~> 
-                (LZ.intercalate (toLByteString ','))
+        cnvLst = map toLByteString a ~> 
+                LZ.intercalate (toLByteString ',')
         (<+>) = LZ.append
 
 instance MuVar [Char] where
@@ -214,9 +214,9 @@ htmlEscape str = LZ.unpack str ~> proc ~> LZ.pack
         | h == ord8 '\''= stp "&#39;" t
         | h == ord8 '<' = stp "&lt;" t
         | h == ord8 '>' = stp "&gt;" t
-        | otherwise     = h : (proc t)
+        | otherwise     = h : proc t
     proc [] = []
-    stp a t = (map ord8 a) ++ (proc t)
+    stp a t = map ord8 a ++ proc t
 
 -- | No escape
 emptyEscape :: LZ.ByteString -> LZ.ByteString
@@ -241,7 +241,7 @@ findBlock ::
     -> ByteString
     -> Maybe (ByteString, Word8, ByteString, ByteString)
 findBlock str otag ctag = do
-    guard (length fnd > (length otag))
+    guard (length fnd > length otag)
     Just (pre, symb, inTag, afterClose)
     where
     (pre, fnd) = breakSubstring otag str
@@ -279,7 +279,7 @@ findCloseSection str name otag ctag = do
     (before, after) = breakSubstring close str
 
 trimCharsTest :: Word8 -> Bool
-trimCharsTest = (`elem` (encodeStr " \t"))
+trimCharsTest = (`elem` encodeStr " \t")
 
 trimAll :: ByteString -> ByteString
 trimAll str = span trimCharsTest str ~> snd ~> spanEnd trimCharsTest ~> fst
@@ -305,7 +305,7 @@ processBlock :: MonadIO m =>
     -> ByteString 
     -> MuConfig 
     -> ReaderT (IORef BSB.Builder) m ()
-processBlock str contexts otag ctag conf = do
+processBlock str contexts otag ctag conf = 
     case findBlock str otag ctag of
         Just (pre, symb, inTag, afterClose) -> do
             addResBS pre
@@ -331,15 +331,14 @@ renderBlock contexts symb inTag afterClose otag ctag conf
     | symb == ord8 '&' || (symb == ord8 '{' && otag == defOTag) = do
         readVar contexts (tail inTag ~> trimAll) ~> addResLZ
         next afterClose
-
-    -- section
-    | symb == ord8 '#' = do
+    -- section, inverted section
+    | symb == ord8 '#' || symb == ord8 '^' = 
         case findCloseSection afterClose (tail inTag) otag ctag of
             Nothing -> next afterClose
             Just (sectionContent', afterSection') -> 
                 let 
                     dropNL str = 
-                        if (length str) > 0 && (head str) == ord8 '\n' 
+                        if length str > 0 && head str == ord8 '\n' 
                            then tail str
                            else str
                     sectionContent = dropNL sectionContent'
@@ -351,61 +350,39 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                     readContext = map ($ tlInTag) contexts 
                         ~> List.find (not . isMuNothing)
                 in 
-                case readContext of
-                    Just (MuList []) -> do
-                        next afterSection
-                    Just (MuList b) -> do
-                        mapM_ (\c -> processBlock sectionContent
-                            (c:contexts) otag ctag conf) b
-                        next afterSection
-                    Just (MuBool True) -> do
-                        processBlock sectionContent
-                            contexts otag ctag conf
-                        next afterSection
-                    Just (MuLambda func) -> do
-                        func sectionContent ~> toLByteString ~> addResLZ
-                        next afterSection
-                    Just (MuLambdaM func) -> do
-                        res <- lift (func sectionContent)
-                        toLByteString res ~> addResLZ
-                        next afterSection
-                    _ -> do
-                        next afterSection
-    
-    -- inverted section
-    | symb == ord8 '^' = do
-        case findCloseSection afterClose (tail inTag) otag ctag of
-            Nothing -> next afterClose
-            Just (sectionContent', afterSection') -> 
-                let 
-                    dropNL str = 
-                        if (length str) > 0 && (head str) == ord8 '\n' 
-                           then tail str
-                           else str
-                    sectionContent = dropNL sectionContent'
-                    afterSection = 
-                        if ord8 '\n' `elem` sectionContent
-                            then dropNL afterSection'
-                            else afterSection'
-                    tlInTag = tail inTag
-                    readContext = map ($ tlInTag) contexts 
-                        ~> List.find (not . isMuNothing)
-                in 
-                case readContext of
-                    Just (MuList []) -> do 
-                        processBlock sectionContent
-                            contexts otag ctag conf
-                        next afterSection
-                    Just (MuBool False) -> do 
-                        processBlock sectionContent
-                            contexts otag ctag conf
-                        next afterSection
-                    Nothing -> do
-                        processBlock sectionContent
-                            contexts otag ctag conf
-                        next afterSection
-                    _ -> do 
-                        next afterSection
+                if symb == ord8 '#'
+                    then case readContext of
+                        Just (MuList []) -> next afterSection
+                        Just (MuList b) -> do
+                            mapM_ (\c -> processBlock sectionContent
+                                (c:contexts) otag ctag conf) b
+                            next afterSection
+                        Just (MuBool True) -> do 
+                            processBlock sectionContent
+                                contexts otag ctag conf
+                            next afterSection
+                        Just (MuLambda func) -> do
+                            func sectionContent ~> toLByteString ~> addResLZ
+                            next afterSection
+                        Just (MuLambdaM func) -> do
+                            res <- lift (func sectionContent)
+                            toLByteString res ~> addResLZ
+                            next afterSection
+                        _ -> next afterSection
+                    else case readContext of
+                        Just (MuList []) -> do 
+                            processBlock sectionContent
+                                contexts otag ctag conf
+                            next afterSection
+                        Just (MuBool False) -> do 
+                            processBlock sectionContent
+                                contexts otag ctag conf
+                            next afterSection
+                        Nothing -> do
+                            processBlock sectionContent
+                                contexts otag ctag conf
+                            next afterSection
+                        _ -> next afterSection
     -- set delimiter
     | symb == ord8 '=' = 
         let
@@ -413,12 +390,11 @@ renderBlock contexts symb inTag afterClose otag ctag conf
             delimitersCommand = take (lenInTag - 1) inTag ~> drop 1
             getDelimiter = do
                 guard (lenInTag > 4)
-                guard ((index inTag $ lenInTag - 1) == ord8 '=')
+                guard (index inTag (lenInTag - 1) == ord8 '=')
                 [newOTag,newCTag] <- Just $ split (ord8 ' ') 
                     delimitersCommand
                 Just (newOTag, newCTag)
-        in do
-            case getDelimiter of
+        in case getDelimiter of
                 Nothing -> next afterClose
                 Just (newOTag, newCTag) -> 
                     processBlock (trim' afterClose) contexts
@@ -429,7 +405,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
             fileName' = tail inTag ~> trimAll
             fileName'' = case muTemplateFileExt conf of
                 Nothing -> fileName'
-                Just ext -> fileName' `append` (encodeStr ext)
+                Just ext -> fileName' `append` encodeStr ext
             fileName = decodeStr fileName''
             fullFileName = case muTemplateFileDir conf of
                 Nothing -> fileName
@@ -444,12 +420,14 @@ renderBlock contexts symb inTag afterClose otag ctag conf
     | otherwise = do
         readVar contexts (trimAll inTag) ~> muEscapeFunc conf ~> addResLZ
         next afterClose
-    where
+  where
     next t = processBlock t contexts otag ctag conf
     trim' content = 
         dropWhile trimCharsTest content
-        ~> \t -> if (length t > 0 && head t == ord8 '\n')
+        ~> \t -> if length t > 0 && head t == ord8 '\n'
             then tail t else content
+    processSection = undefined
+            
 
 -- | Render Hastache template from ByteString
 hastacheStr :: (MonadIO m) => 
