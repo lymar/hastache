@@ -365,6 +365,7 @@ nestedGenericContextTest = do
         \Top variable : {{topDataTop}}\n\
         \Nested variable : {{nestedDataNested}}\n\
         \{{/topDataItems}}\n\
+        \no context : {{^noCtx}}Should render{{/noCtx}}\n\
         \"
     context = mkGenericContext $ TopData {
         topDataTop = "TOP",
@@ -380,6 +381,7 @@ nestedGenericContextTest = do
         \-- Nested section\n\
         \Top variable : TOP\n\
         \Nested variable : NESTED_TWO\n\
+        \no context : Should render\n\
         \"
 
 tests = TestList [
