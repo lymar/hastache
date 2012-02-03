@@ -68,27 +68,30 @@ variablesTest = do
         \   HtmlStringUnEsc2:   [ <p>text (\\)</p> ]     \n\
         \"
 
--- Show/hide block according to list state
-emptyListSectionsTest = do
+-- Show/hide block
+sectionShowHideTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
+        \no context : {{^noCtx}}Should render{{/noCtx}}\n\
         \text 1\n\
-        \{{#blankSection}}\n\
+        \{{#emptyList}}\n\
         \   some text\n\
-        \{{/blankSection}}\n\
+        \{{/emptyList}}\n\
         \text 2\n\
-        \{{^blankSection}}\n\
+        \{{^emptyList}}\n\
         \   empty list. {{someval}}\n\
-        \{{/blankSection}}\n\
-        \inline [{{#blankSection}}txt{{/blankSection}}]\n\
+        \{{/emptyList}}\n\
+        \inline [{{#emptyList}}txt{{/emptyList}}]\n\
         \"
-    context "blankSection" = MuList []
+    context "emptyList" = MuList []
     context "someval" = MuVariable (5 :: Int)
+    context _ = MuNothing
     
     testRes = "\
+        \no context : Should render\n\
         \text 1\n\
         \text 2\n\
         \   empty list. 5\n\
@@ -367,7 +370,6 @@ nestedGenericContextTest = do
         \Top variable : {{topDataTop}}\n\
         \Nested variable : {{nestedDataNested}}\n\
         \{{/topDataItems}}\n\
-        \no context : {{^noCtx}}Should render{{/noCtx}}\n\
         \"
     context = mkGenericContext $ TopData {
         topDataTop = "TOP",
@@ -383,13 +385,12 @@ nestedGenericContextTest = do
         \-- Nested section\n\
         \Top variable : TOP\n\
         \Nested variable : NESTED_TWO\n\
-        \no context : Should render\n\
         \"
 
 tests = TestList [
      TestLabel "Comments test" (TestCase commentsTest)
     ,TestLabel "Variables test" (TestCase variablesTest)
-    ,TestLabel "Empty list test" (TestCase emptyListSectionsTest)
+    ,TestLabel "Show/hide section" (TestCase sectionShowHideTest)
     ,TestLabel "List test" (TestCase listSectionTest)
     ,TestLabel "Bool test" (TestCase boolSectionTest)
     ,TestLabel "Lambda test" (TestCase lambdaSectionTest)
