@@ -13,10 +13,12 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LZ
 import qualified Data.Text as T
 
+resCorrectness = "result correctness"
+
 -- Hastache comments
 commentsTest = do
     res <- hastacheStr defaultConfig (encodeStr template) undefined
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \hello {{! comment #1}} world! \n\
@@ -33,7 +35,7 @@ commentsTest = do
 variablesTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \   Char:               [ {{Char}} ]            \n\
@@ -70,7 +72,7 @@ variablesTest = do
 emptyListSectionsTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \text 1\n\
@@ -97,7 +99,7 @@ emptyListSectionsTest = do
 listSectionTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \text 1\n\
@@ -123,7 +125,7 @@ listSectionTest = do
 boolSectionTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \text 1\n\
@@ -156,7 +158,7 @@ boolSectionTest = do
 lambdaSectionTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \text 1\n\
@@ -174,7 +176,7 @@ lambdaSectionTest = do
 -- Transform section with monadic function
 lambdaMSectionTest = do
     (res, writerState) <- runWriterT monadicFunction
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     assertEqualStr "monad state correctness" (decodeStr writerState)
         testMonad
     where
@@ -199,7 +201,7 @@ lambdaMSectionTest = do
 setDelimiterTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \text 1\n\
@@ -224,7 +226,7 @@ setDelimiterTest = do
 partialsTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \text 1\n\
@@ -261,7 +263,7 @@ data SomeData = SomeData {
 genericContextTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkGenericContext context)
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \text 1\n\
@@ -321,7 +323,7 @@ genericContextTest = do
 nestedContextTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \{{top}}\n\
@@ -356,7 +358,7 @@ data NestedData = NestedData {
 
 nestedGenericContextTest = do
     res <- hastacheStr defaultConfig (encodeStr template) context
-    assertEqualStr "result correctness" (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
         \Top variable : {{topDataTop}}\n\
