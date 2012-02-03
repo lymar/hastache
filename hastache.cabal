@@ -1,5 +1,5 @@
 name:            hastache
-version:         0.2.4
+version:         0.3.1
 license:         BSD3
 license-file:    LICENSE
 category:        Text
@@ -40,6 +40,7 @@ library
     ,containers
     ,syb
     ,blaze-builder
+    ,ieee754
 
 source-repository head
   type:     git
