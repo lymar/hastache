@@ -68,8 +68,8 @@ variablesTest = do
         \   HtmlStringUnEsc2:   [ <p>text (\\)</p> ]     \n\
         \"
 
--- Inverted sections
-invertedSections = do
+-- Show/hide sections
+showHideSectionsTest = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
@@ -91,6 +91,12 @@ invertedSections = do
         \{{^emptyInt}}yes {{emptyInt}}{{/emptyInt}}\n\
         \{{#emptyDouble}}no {{emptyDouble}}{{/emptyDouble}}\
         \{{^emptyDouble}}yes {{emptyDouble}}{{/emptyDouble}}\n\
+        \{{#nonEmptyString}}yes {{nonEmptyString}}{{/nonEmptyString}}\
+        \{{^nonEmptyString}}no{{/nonEmptyString}}\n\
+        \{{#nonEmptyInt}}yes {{nonEmptyInt}}{{/nonEmptyInt}}\
+        \{{^nonEmptyInt}}no{{/nonEmptyInt}}\n\
+        \{{#nonEmptyDouble}}yes {{nonEmptyDouble}}{{/nonEmptyDouble}}\
+        \{{^nonEmptyDouble}}no{{/nonEmptyDouble}}\n\
         \"
     context "noCtx" = MuNothing
     context "emptyList" = MuList []
@@ -98,6 +104,9 @@ invertedSections = do
     context "emptyString" = MuVariable ""
     context "emptyInt" = MuVariable (0 :: Int)
     context "emptyDouble" = MuVariable (0 :: Double)
+    context "nonEmptyString" = MuVariable "some"
+    context "nonEmptyInt" = MuVariable (1 :: Int)
+    context "nonEmptyDouble" = MuVariable (1 :: Double)
     
     testRes = "\
         \no context : Should render\n\
@@ -108,6 +117,9 @@ invertedSections = do
         \yes 5\n\
         \yes 0\n\
         \yes 0.0\n\
+        \yes some\n\
+        \yes 1\n\
+        \yes 1.0\n\
         \"
 
 -- Render list
@@ -402,7 +414,7 @@ nestedGenericContextTest = do
 tests = TestList [
      TestLabel "Comments test" (TestCase commentsTest)
     ,TestLabel "Variables test" (TestCase variablesTest)
-    ,TestLabel "Inverted sections" (TestCase invertedSections)
+    ,TestLabel "Show/hide sections test" (TestCase showHideSectionsTest)
     ,TestLabel "List test" (TestCase listSectionTest)
     ,TestLabel "Bool test" (TestCase boolSectionTest)
     ,TestLabel "Lambda test" (TestCase lambdaSectionTest)

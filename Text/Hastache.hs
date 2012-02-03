@@ -371,6 +371,9 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                             mapM_ (\c -> processBlock sectionContent
                                 (c:contexts) otag ctag conf) b
                             next afterSection
+                        Just (MuVariable a) -> if isEmpty a 
+                            then next afterSection
+                            else processAndNext
                         Just (MuBool True) -> processAndNext
                         Just (MuLambda func) -> do
                             func sectionContent ~> toLByteString ~> addResLZ
