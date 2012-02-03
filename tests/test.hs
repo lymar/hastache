@@ -68,8 +68,8 @@ variablesTest = do
         \   HtmlStringUnEsc2:   [ <p>text (\\)</p> ]     \n\
         \"
 
--- Show/hide block
-sectionShowHideTest = do
+-- Inverted sections
+invertedSections = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
@@ -85,10 +85,19 @@ sectionShowHideTest = do
         \   empty list. {{someval}}\n\
         \{{/emptyList}}\n\
         \inline [{{#emptyList}}txt{{/emptyList}}]\n\
+        \{{#emptyString}}no {{someval}}{{/emptyString}}\
+        \{{^emptyString}}yes {{someval}}{{/emptyString}}\n\
+        \{{#emptyInt}}no {{emptyInt}}{{/emptyInt}}\
+        \{{^emptyInt}}yes {{emptyInt}}{{/emptyInt}}\n\
+        \{{#emptyDouble}}no {{emptyDouble}}{{/emptyDouble}}\
+        \{{^emptyDouble}}yes {{emptyDouble}}{{/emptyDouble}}\n\
         \"
+    context "noCtx" = MuNothing
     context "emptyList" = MuList []
     context "someval" = MuVariable (5 :: Int)
-    context _ = MuNothing
+    context "emptyString" = MuVariable ""
+    context "emptyInt" = MuVariable (0 :: Int)
+    context "emptyDouble" = MuVariable (0 :: Double)
     
     testRes = "\
         \no context : Should render\n\
@@ -96,6 +105,9 @@ sectionShowHideTest = do
         \text 2\n\
         \   empty list. 5\n\
         \inline []\n\
+        \yes 5\n\
+        \yes 0\n\
+        \yes 0.0\n\
         \"
 
 -- Render list
@@ -390,7 +402,7 @@ nestedGenericContextTest = do
 tests = TestList [
      TestLabel "Comments test" (TestCase commentsTest)
     ,TestLabel "Variables test" (TestCase variablesTest)
-    ,TestLabel "Show/hide section" (TestCase sectionShowHideTest)
+    ,TestLabel "Inverted sections" (TestCase invertedSections)
     ,TestLabel "List test" (TestCase listSectionTest)
     ,TestLabel "Bool test" (TestCase boolSectionTest)
     ,TestLabel "Lambda test" (TestCase lambdaSectionTest)

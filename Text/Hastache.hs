@@ -83,6 +83,7 @@ module Text.Hastache (
 import Control.Monad (guard, when)
 import Control.Monad.Reader (ask, runReaderT, MonadReader, ReaderT)
 import Control.Monad.Trans (lift, liftIO, MonadIO)
+import Data.AEq ((~==))
 import Data.ByteString hiding (map, foldl1)
 import Data.Char (ord)
 import Data.Int
@@ -101,6 +102,7 @@ import qualified Data.ByteString.Lazy as LZ
 import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as LText
+import qualified Prelude
 
 (~>) :: a -> (a -> b) -> b
 x ~> f = f x
@@ -112,35 +114,44 @@ type MuContext m =
     -> MuType m -- ^ Value
 
 class Show a => MuVar a where
+    -- ^ Convert to Lazy ByteString
     toLByteString   :: a -> LZ.ByteString
+    -- ^ Is empty variable (empty string, zero number etc.)
+    isEmpty         :: a -> Bool
+    isEmpty _ = False
         
 instance MuVar ByteString where
     toLByteString = toLBS
+    isEmpty a = length a == 0
     
 instance MuVar LZ.ByteString where
     toLByteString = id
+    isEmpty a = LZ.length a == 0
     
 withShowToLBS a = show a ~> encodeStr ~> toLBS
+numEmpty a = a ~== 0
 
-instance MuVar Integer  where toLByteString = withShowToLBS
-instance MuVar Int      where toLByteString = withShowToLBS
-instance MuVar Float    where toLByteString = withShowToLBS
-instance MuVar Double   where toLByteString = withShowToLBS
-instance MuVar Int8     where toLByteString = withShowToLBS
-instance MuVar Int16    where toLByteString = withShowToLBS
-instance MuVar Int32    where toLByteString = withShowToLBS
-instance MuVar Int64    where toLByteString = withShowToLBS
-instance MuVar Word     where toLByteString = withShowToLBS
-instance MuVar Word8    where toLByteString = withShowToLBS
-instance MuVar Word16   where toLByteString = withShowToLBS
-instance MuVar Word32   where toLByteString = withShowToLBS
-instance MuVar Word64   where toLByteString = withShowToLBS
+instance MuVar Integer where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Int     where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Float   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Double  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Int8    where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Int16   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Int32   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Int64   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Word    where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Word8   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Word16  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Word32  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar Word64  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
 
 instance MuVar Text.Text where 
     toLByteString t = Text.unpack t ~> encodeStr ~> toLBS
+    isEmpty a = Text.length a == 0
 
 instance MuVar LText.Text where 
     toLByteString t = LText.unpack t ~> encodeStr ~> toLBS
+    isEmpty a = LText.length a == 0
     
 instance MuVar Char where
     toLByteString a = (a : "") ~> encodeStr ~> toLBS
@@ -154,7 +165,8 @@ instance MuVar a => MuVar [a] where
 
 instance MuVar [Char] where
     toLByteString k = k ~> encodeStr ~> toLBS
-    
+    isEmpty a = Prelude.length a == 0
+
 data MuType m = 
     forall a. MuVar a => MuVariable a                   |
     MuList [MuContext m]                                |
@@ -371,6 +383,9 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                     else case readContext of -- inverted section
                         Just (MuList []) -> processAndNext
                         Just (MuBool False) -> processAndNext
+                        Just (MuVariable a) -> if isEmpty a 
+                            then processAndNext
+                            else next afterSection
                         Nothing -> processAndNext
                         _ -> next afterSection
     -- set delimiter
