@@ -114,10 +114,10 @@ type MuContext m =
     -> MuType m -- ^ Value
 
 class Show a => MuVar a where
-    -- ^ Convert to Lazy ByteString
-    toLByteString   :: a -> LZ.ByteString
-    -- ^ Is empty variable (empty string, zero number etc.)
-    isEmpty         :: a -> Bool
+    -- | Convert to Lazy ByteString
+    toLByteString   :: a -> LZ.ByteString 
+    -- | Is empty variable (empty string, zero number etc.)
+    isEmpty         :: a -> Bool 
     isEmpty _ = False
         
 instance MuVar ByteString where
