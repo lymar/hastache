@@ -348,18 +348,18 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                     tlInTag = tail inTag
                     readContext = map ($ tlInTag) contexts 
                         ~> List.find (not . isMuNothing)
+                    processAndNext = do 
+                        processBlock sectionContent contexts otag ctag conf
+                        next afterSection
                 in 
                 if symb == ord8 '#'
-                    then case readContext of
+                    then case readContext of -- section
                         Just (MuList []) -> next afterSection
                         Just (MuList b) -> do
                             mapM_ (\c -> processBlock sectionContent
                                 (c:contexts) otag ctag conf) b
                             next afterSection
-                        Just (MuBool True) -> do 
-                            processBlock sectionContent
-                                contexts otag ctag conf
-                            next afterSection
+                        Just (MuBool True) -> processAndNext
                         Just (MuLambda func) -> do
                             func sectionContent ~> toLByteString ~> addResLZ
                             next afterSection
@@ -368,19 +368,10 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                             toLByteString res ~> addResLZ
                             next afterSection
                         _ -> next afterSection
-                    else case readContext of
-                        Just (MuList []) -> do 
-                            processBlock sectionContent
-                                contexts otag ctag conf
-                            next afterSection
-                        Just (MuBool False) -> do 
-                            processBlock sectionContent
-                                contexts otag ctag conf
-                            next afterSection
-                        Nothing -> do
-                            processBlock sectionContent
-                                contexts otag ctag conf
-                            next afterSection
+                    else case readContext of -- inverted section
+                        Just (MuList []) -> processAndNext
+                        Just (MuBool False) -> processAndNext
+                        Nothing -> processAndNext
                         _ -> next afterSection
     -- set delimiter
     | symb == ord8 '=' = 
