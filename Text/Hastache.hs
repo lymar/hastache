@@ -309,8 +309,7 @@ processBlock str contexts otag ctag conf =
     case findBlock str otag ctag of
         Just (pre, symb, inTag, afterClose) -> do
             addResBS pre
-            renderBlock contexts symb inTag afterClose 
-                otag ctag conf
+            renderBlock contexts symb inTag afterClose otag ctag conf
         Nothing -> do
             addResBS str
             return ()
@@ -389,10 +388,9 @@ renderBlock contexts symb inTag afterClose otag ctag conf
             lenInTag = length inTag
             delimitersCommand = take (lenInTag - 1) inTag ~> drop 1
             getDelimiter = do
-                guard (lenInTag > 4)
-                guard (index inTag (lenInTag - 1) == ord8 '=')
-                [newOTag,newCTag] <- Just $ split (ord8 ' ') 
-                    delimitersCommand
+                guard $ lenInTag > 4
+                guard $ index inTag (lenInTag - 1) == ord8 '='
+                [newOTag,newCTag] <- Just $ split (ord8 ' ') delimitersCommand
                 Just (newOTag, newCTag)
         in case getDelimiter of
                 Nothing -> next afterClose
@@ -420,14 +418,13 @@ renderBlock contexts symb inTag afterClose otag ctag conf
     | otherwise = do
         readVar contexts (trimAll inTag) ~> muEscapeFunc conf ~> addResLZ
         next afterClose
-  where
+    where
     next t = processBlock t contexts otag ctag conf
     trim' content = 
         dropWhile trimCharsTest content
         ~> \t -> if length t > 0 && head t == ord8 '\n'
             then tail t else content
     processSection = undefined
-            
 
 -- | Render Hastache template from ByteString
 hastacheStr :: (MonadIO m) => 
