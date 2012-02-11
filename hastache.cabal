@@ -3,7 +3,7 @@ version:         0.3.3
 license:         BSD3
 license-file:    LICENSE
 category:        Text
-copyright:       Sergey S Lymar (c) 2011
+copyright:       Sergey S Lymar (c) 2011-2012
 author:          Sergey S Lymar <sergey.lymar@gmail.com>
 maintainer:      Sergey S Lymar <sergey.lymar@gmail.com>
 stability:       experimental
