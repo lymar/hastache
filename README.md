@@ -11,6 +11,8 @@ Haskell implementation of [Mustache templates](http://mustache.github.com/)
 
 Read [Mustache documentation](http://mustache.github.com/mustache.5.html) for template syntax.
 
+See [Hastache hackage page](http://hackage.haskell.org/package/hastache).
+
 ### Examples
 
 #### Variables
