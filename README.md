@@ -108,6 +108,45 @@ context = mkGenericContext $ Heroes ["Nameless","Long Sky","Flying Snow",
     "Broken Sword","Qin Shi Huang"]
 ```
 
+#### Conditional evaluation
+
+Boolean
+
+```haskell
+template = "{{#boolean}}true{{/boolean}}{{^boolean}}false{{/boolean}}"
+context "boolean" = MuBool False
+```
+```
+false
+```
+
+List
+
+```haskell
+template = "{{^messages}}No new messages{{/messages}}"
+context "messages" = MuList []
+```
+```
+No new messages
+```
+
+Number
+
+```haskell
+main = mapM_ (\ctx ->
+    hastacheStr defaultConfig (encodeStr template) (mkStrContext ctx)
+    >>= LZ.putStrLn) [context1,context2]
+
+template = "{{#msg}}{{msg}}{{/msg}}{{^msg}}No{{/msg}} new messages."
+
+context1 "msg" = MuVariable (100 :: Int)
+context2 "msg" = MuVariable (0 :: Int)
+```
+```
+100 new messages.
+No new messages.
+```
+
 #### Functions
 
 ```haskell

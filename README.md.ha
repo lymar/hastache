@@ -37,6 +37,23 @@ Another Generics version
 
 {{#example}}listsGeneric.2{{/example}}
 
+#### Conditional evaluation
+
+Boolean
+
+{{#example}}conditionalBool{{/example}}
+{{#runExample}}conditionalBool{{/runExample}}
+
+List
+
+{{#example}}conditionalList{{/example}}
+{{#runExample}}conditionalList{{/runExample}}
+
+Number
+
+{{#example}}conditionalNumber{{/example}}
+{{#runExample}}conditionalNumber{{/runExample}}
+
 #### Functions
 
 {{#example}}function{{/example}}
