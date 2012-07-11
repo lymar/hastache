@@ -250,7 +250,8 @@ convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
         Map.insert (encodeStr name) 
         ([foldl (foldTObj "") Map.empty lst ~> mkMapContext] ~> MuList)
     mkMap name m (TList lst) = Map.insert (encodeStr name) 
-        (map convertGenTempToContext lst ~> MuList) m
+        (map convertGenTempToContext lst ~> MuList)
+        (snd $ foldl (mkListAcc name) (0,m) lst)
     mkMap _ m _ = m
     
     mkName name newName = if length name > 0 
@@ -267,6 +268,8 @@ convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
                         Just a -> a
                 _ -> MuNothing
         Just a -> a
+
+    mkListAcc nm (i,m) fv = (i+1,mkMap (concat [nm, ".", show i]) m fv)
 
 dotBS = encodeStr "."
 
