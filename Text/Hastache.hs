@@ -1,5 +1,5 @@
-{-# LANGUAGE ExistentialQuantification, FlexibleInstances, 
-    IncoherentInstances #-}
+{-# LANGUAGE ExistentialQuantification, FlexibleInstances, IncoherentInstances,
+             OverloadedStrings #-}
 -- Module:      Text.Hastache
 -- Copyright:   Sergey S Lymar (c) 2011 
 -- License:     BSD3
@@ -244,9 +244,9 @@ defaultConfig = MuConfig {
     muTemplateFileExt = Nothing
     } 
 
-defOTag = encodeStr "{{"
-defCTag = encodeStr "}}"
-unquoteCTag = encodeStr "}}}"
+defOTag = "{{" :: ByteString
+defCTag = "}}" :: ByteString
+unquoteCTag = "}}}" :: ByteString
 
 findBlock :: 
        ByteString 
@@ -270,6 +270,8 @@ findBlock str otag ctag = do
 toLBS :: ByteString -> LZ.ByteString
 toLBS v = LZ.fromChunks [v]
 
+
+readVar :: MonadIO m => [MuContext m] -> ByteString -> LZ.ByteString
 readVar [] _ = LZ.empty
 readVar (context:parentCtx) name =
     case context name of
@@ -280,6 +282,10 @@ readVar (context:parentCtx) name =
             _ -> readVar parentCtx name
         _ -> LZ.empty
 
+tryFindArrayItem :: MonadIO m => 
+       MuContext m
+    -> ByteString 
+    -> Maybe (MuContext m, ByteString)
 tryFindArrayItem context name = do
     guard $ length idx > 1
     (idx,nxt) <- readInt $ tail idx
@@ -295,7 +301,7 @@ tryFindArrayItem context name = do
         _ -> Nothing
     where
     (nm,idx) = breakSubstring dotStr name
-    dotStr = encodeStr "."
+    dotStr = "."
 
 findCloseSection :: 
        ByteString 
@@ -307,11 +313,11 @@ findCloseSection str name otag ctag = do
     guard (length after > 0)
     Just (before, drop (length close) after)
     where
-    close = foldl1 append [otag, encodeStr "/", name, ctag]
+    close = foldl1 append [otag, "/", name, ctag]
     (before, after) = breakSubstring close str
 
 trimCharsTest :: Word8 -> Bool
-trimCharsTest = (`elem` encodeStr " \t")
+trimCharsTest = (`elem` " \t")
 
 trimAll :: ByteString -> ByteString
 trimAll str = span trimCharsTest str ~> snd ~> spanEnd trimCharsTest ~> fst
@@ -332,7 +338,7 @@ addResLZ = addRes
 
 processBlock :: MonadIO m => 
        ByteString 
-    -> [ByteString -> MuType m] 
+    -> [MuContext m] 
     -> ByteString 
     -> ByteString 
     -> MuConfig 
@@ -346,8 +352,8 @@ processBlock str contexts otag ctag conf =
             addResBS str
             return ()
 
-renderBlock:: MonadIO m =>
-       [ByteString -> MuType m] 
+renderBlock :: MonadIO m =>
+       [MuContext m] 
     -> Word8 
     -> ByteString 
     -> ByteString 
