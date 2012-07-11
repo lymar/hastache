@@ -39,6 +39,12 @@ Another Generics version
 
 {{#example}}listsGeneric.2{{/example}}
 
+List item by index
+
+{{#example}}listsByIndex{{/example}}
+
+{{#runExample}}listsByIndex{{/runExample}}
+
 #### Conditional evaluation
 
 Boolean
