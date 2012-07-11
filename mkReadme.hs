@@ -41,7 +41,7 @@ main = do
     be = "-- begin example"
     setExampleDir = do
         cd <- getCurrentDirectory
-        setCurrentDirectory $ cd </> "example"
+        setCurrentDirectory $ cd </> "examples"
         return cd
     exampleFile fn = decodeStr fn ++ ".hs"
 
