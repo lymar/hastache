@@ -1,5 +1,5 @@
 name:            hastache
-version:         0.3.3
+version:         0.4.1
 license:         BSD3
 license-file:    LICENSE
 category:        Text
@@ -45,4 +45,3 @@ library
 source-repository head
   type:     git
   location: http://github.com/lymar/hastache
-
