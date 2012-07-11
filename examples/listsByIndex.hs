@@ -11,7 +11,7 @@ main = mapM_ (\(template,context) ->
     hastacheStr defaultConfig (encodeStr template) context >>= LZ.putStrLn) 
         [(template1, mkStrContext context1),
          (template1, context2),
-         (template2, context3)]
+         (template3, context3)]
 
 names = ["Nameless","Long Sky","Flying Snow","Broken Sword","Qin Shi Huang"]
 
@@ -31,7 +31,8 @@ data Heroes = Heroes { heroes :: [Hero] } deriving (Data, Typeable)
 
 context2 = mkGenericContext $ Heroes $ map Hero names
 
-template2 = concat [
+-- With Generics (another way)
+template3 = concat [
     "{{heroName.3}}\n",
     "{{heroName.2}}\n"]
 
