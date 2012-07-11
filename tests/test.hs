@@ -303,6 +303,7 @@ genericContextTest = do
         \{{#someDataList}}\n\
         \* {{.}} \n\
         \{{/someDataList}}\n\
+        \List item by index: {{someDataList.1}} \n\
         \Obj list:\n\
         \{{#someDataObjList}}\n\
         \* {{intDataField1}} : {{intDataField2}} \n\
@@ -335,6 +336,7 @@ genericContextTest = do
         \* 1 \n\
         \* 2 \n\
         \* 3 \n\
+        \List item by index: 2 \n\
         \Obj list:\n\
         \* a : 1 \n\
         \* b : 2 \n\
@@ -411,6 +413,57 @@ nestedGenericContextTest = do
         \Nested variable : NESTED_TWO\n\
         \"
 
+-- Accessing array item by index
+arrayItemsTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) 
+        (mkStrContext context)
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    where
+    template = "\
+        \{{section.0.name}} {{section.1.name}} {{section.2.name}}\n\
+        \{{#flags.0.val}}yes{{/flags.0.val}}\n\
+        \{{^flags.1.val}}no{{/flags.0.val}}\n\
+        \"
+    context "section" = MuList $ map nameCtx ["Neo", "Morpheus", "Trinity"]
+    context "flags" = MuList $ map flagCtx [True, False]
+    context n = MuNothing
+    nameCtx name = mkStrContext (\"name" -> MuVariable name)
+    flagCtx val = mkStrContext (\"val" -> MuBool val)
+
+    testRes = "\
+        \Neo Morpheus Trinity\n\
+        \yes\n\
+        \no\n\
+        \"
+
+-- Accessing array item by index (generic version)
+data ArrayItemTest_Item = ArrayItemTest_Item { 
+    name :: String 
+    } deriving (Data, Typeable)    
+
+data ArrayItemTest_Container = ArrayItemTest_Container { 
+    items       :: [ArrayItemTest_Item],
+    itemsStr    :: [String]
+    } deriving (Data, Typeable)    
+
+arrayItemsTestGeneric = do
+    res <- hastacheStr defaultConfig (encodeStr template) context
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    where
+    template = "\
+        \{{items.0.name}} {{items.2.name}}\n\
+        \{{itemsStr.0}} {{itemsStr.1}}\n\
+        \"
+    context = mkGenericContext $ ArrayItemTest_Container {
+        items = [ArrayItemTest_Item "Bob", ArrayItemTest_Item "Alice",
+                 ArrayItemTest_Item "Zoe"],
+        itemsStr = ["Bob", "Alice", "Zoe"]
+    }
+    testRes = "\
+        \Bob Zoe\n\
+        \Bob Alice\n\
+        \"
+
 tests = TestList [
      TestLabel "Comments test" (TestCase commentsTest)
     ,TestLabel "Variables test" (TestCase variablesTest)
@@ -424,6 +477,9 @@ tests = TestList [
     ,TestLabel "Generic context test" (TestCase genericContextTest)
     ,TestLabel "Nested context test" (TestCase nestedContextTest)
     ,TestLabel "Nested generic context test" (TestCase nestedGenericContextTest)
+    ,TestLabel "Accessing array item by index" (TestCase arrayItemsTest)
+    ,TestLabel "Accessing array item by index (generic version)" 
+        (TestCase arrayItemsTestGeneric)
     ]
 
 main = do

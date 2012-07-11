@@ -85,6 +85,7 @@ import Control.Monad.Reader (ask, runReaderT, MonadReader, ReaderT)
 import Control.Monad.Trans (lift, liftIO, MonadIO)
 import Data.AEq ((~==))
 import Data.ByteString hiding (map, foldl1)
+import Data.ByteString.Char8 (readInt)
 import Data.Char (ord)
 import Data.Int
 import Data.IORef
@@ -92,7 +93,7 @@ import Data.Maybe (isJust)
 import Data.Monoid (mappend, mempty)
 import Data.Word
 import Prelude hiding (putStrLn, readFile, length, drop, tail, dropWhile, elem,
-    head, last, reverse, take, span)
+    head, last, reverse, take, span, null)
 import System.Directory (doesFileExist)
 import System.FilePath (combine)
 
@@ -274,8 +275,27 @@ readVar (context:parentCtx) name =
     case context name of
         MuVariable a -> toLByteString a
         MuBool a -> show a ~> encodeStr ~> toLBS
-        MuNothing -> readVar parentCtx name
+        MuNothing -> case tryFindArrayItem context name of
+            Just (nctx,nn) -> readVar [nctx] nn
+            _ -> readVar parentCtx name
         _ -> LZ.empty
+
+tryFindArrayItem context name = do
+    guard $ length idx > 1
+    (idx,nxt) <- readInt $ tail idx
+    guard $ idx >= 0
+    guard $ (null nxt) || ((head nxt) == (ord8 '.'))
+    case context nm of
+        MuList l -> do
+            guard $ idx < (List.length l)
+            let ncxt = l !! idx
+            if null nxt 
+                then Just (ncxt, dotStr) -- {{some.0}}
+                else Just (ncxt, tail nxt) -- {{some.0.field}}
+        _ -> Nothing
+    where
+    (nm,idx) = breakSubstring dotStr name
+    dotStr = encodeStr "."
 
 findCloseSection :: 
        ByteString 
@@ -358,8 +378,16 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                             then dropNL afterSection'
                             else afterSection'
                     tlInTag = tail inTag
-                    readContext = map ($ tlInTag) contexts 
+                    readContext' = map ($ tlInTag) contexts 
                         ~> List.find (not . isMuNothing)
+                    readContextWithIdx = do
+                        Just (ctx,name) <- map (
+                            \c -> tryFindArrayItem c tlInTag) 
+                            contexts ~> List.find isJust
+                        Just $ ctx name
+                    readContext = case readContext' of
+                        Just a -> Just a
+                        Nothing -> readContextWithIdx
                     processAndNext = do 
                         processBlock sectionContent contexts otag ctag conf
                         next afterSection
