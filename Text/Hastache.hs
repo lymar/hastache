@@ -83,7 +83,7 @@ module Text.Hastache (
 import Control.Monad (guard, when)
 import Control.Monad.Reader (ask, runReaderT, MonadReader, ReaderT)
 import Control.Monad.Trans (lift, liftIO, MonadIO)
-import Data.AEq ((~==))
+import Data.AEq (AEq,(~==))
 import Data.ByteString hiding (map, foldl1)
 import Data.ByteString.Char8 (readInt)
 import Data.Char (ord)
@@ -102,7 +102,9 @@ import qualified Codec.Binary.UTF8.String as SU
 import qualified Data.ByteString.Lazy as LZ
 import qualified Data.List as List
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as TextEncoding
 import qualified Data.Text.Lazy as LText
+import qualified Data.Text.Lazy.Encoding as LTextEncoding
 import qualified Prelude
 
 (~>) :: a -> (a -> b) -> b
@@ -128,8 +130,11 @@ instance MuVar ByteString where
 instance MuVar LZ.ByteString where
     toLByteString = id
     isEmpty a = LZ.length a == 0
-    
+
+withShowToLBS :: Show a => a -> LZ.ByteString
 withShowToLBS a = show a ~> encodeStr ~> toLBS
+
+numEmpty :: (Num a,AEq a) => a -> Bool
 numEmpty a = a ~== 0
 
 instance MuVar Integer where {toLByteString = withShowToLBS; isEmpty = numEmpty}
@@ -147,11 +152,11 @@ instance MuVar Word32  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
 instance MuVar Word64  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
 
 instance MuVar Text.Text where 
-    toLByteString t = Text.unpack t ~> encodeStr ~> toLBS
+    toLByteString t = TextEncoding.encodeUtf8 t ~> toLBS
     isEmpty a = Text.length a == 0
 
 instance MuVar LText.Text where 
-    toLByteString t = LText.unpack t ~> encodeStr ~> toLBS
+    toLByteString t = LTextEncoding.encodeUtf8 t
     isEmpty a = LText.length a == 0
     
 instance MuVar Char where
