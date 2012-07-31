@@ -7,7 +7,9 @@ copyright:       Sergey S Lymar (c) 2011-2012
 author:          Sergey S Lymar <sergey.lymar@gmail.com>
 maintainer:      Sergey S Lymar <sergey.lymar@gmail.com>
 stability:       experimental
-tested-with:     GHC == 7.0.2, GHC == 7.0.3
+tested-with:     
+                 GHC == 7.0.2,
+                 GHC == 7.0.3
 synopsis:        Haskell implementation of Mustache templates
 cabal-version:   >= 1.8
 homepage:        http://github.com/lymar/hastache
