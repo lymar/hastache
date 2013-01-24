@@ -197,14 +197,14 @@ instance Show (MuType m) where
     show (MuLambdaM _) = "MuLambdaM <..>"
     show MuNothing = "MuNothing"
 
-data MuConfig = MuConfig {
+data MuConfig m = MuConfig {
     muEscapeFunc        :: LZ.ByteString -> LZ.ByteString, 
         -- ^ Escape function ('htmlEscape', 'emptyEscape' etc.)
     muTemplateFileDir   :: Maybe FilePath,
         -- ^ Directory for search partial templates ({{> templateName}})
     muTemplateFileExt   :: Maybe String,
         -- ^ Partial template files extension
-    muTemplateRead      :: FilePath -> IO (Maybe ByteString)
+    muTemplateRead      :: FilePath -> m (Maybe ByteString)
         -- ^ Template retrieval function. 'Nothing' indicates that the
         --   template could not be found.
     }
@@ -253,7 +253,7 @@ emptyEscape = id
 
 {- | Default config: HTML escape function, current directory as 
      template directory, template file extension not specified -}
-defaultConfig :: MuConfig 
+defaultConfig :: MonadIO m => MuConfig m
 defaultConfig = MuConfig { 
     muEscapeFunc = htmlEscape,
     muTemplateFileDir = Nothing,
@@ -261,8 +261,8 @@ defaultConfig = MuConfig {
     muTemplateRead = defaultTemplateRead
     }
 
-defaultTemplateRead :: FilePath -> IO (Maybe ByteString)
-defaultTemplateRead fullFileName = do
+defaultTemplateRead :: MonadIO m => FilePath -> m (Maybe ByteString)
+defaultTemplateRead fullFileName = liftIO $ do
   fe <- doesFileExist fullFileName
   if fe
     then Just <$> readFile fullFileName
@@ -369,7 +369,7 @@ processBlock :: MonadIO m =>
     -> [MuContext m] 
     -> ByteString 
     -> ByteString 
-    -> MuConfig 
+    -> MuConfig m
     -> ReaderT (IORef BSB.Builder) m ()
 processBlock str contexts otag ctag conf = 
     case findBlock str otag ctag of
@@ -387,7 +387,7 @@ renderBlock :: MonadIO m =>
     -> ByteString 
     -> ByteString
     -> ByteString 
-    -> MuConfig 
+    -> MuConfig m
     -> ReaderT (IORef BSB.Builder) m ()
 renderBlock contexts symb inTag afterClose otag ctag conf
     -- comment
@@ -479,7 +479,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                 Nothing -> fileName
                 Just path -> combine path fileName
         in do
-            F.mapM_ next =<< liftIO (muTemplateRead conf fullFileName)
+            F.mapM_ next =<< lift (muTemplateRead conf fullFileName)
             next (trim' afterClose)
     -- variable
     | otherwise = do
@@ -496,7 +496,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
 
 -- | Render Hastache template from ByteString
 hastacheStr :: (MonadIO m) => 
-       MuConfig         -- ^ Configuration
+       MuConfig m       -- ^ Configuration
     -> ByteString       -- ^ Template
     -> MuContext m      -- ^ Context
     -> m LZ.ByteString
@@ -505,7 +505,7 @@ hastacheStr conf str context =
 
 -- | Render Hastache template from file
 hastacheFile :: (MonadIO m) => 
-       MuConfig         -- ^ Configuration
+       MuConfig m       -- ^ Configuration
     -> FilePath         -- ^ Template file name
     -> MuContext m      -- ^ Context
     -> m LZ.ByteString
@@ -514,7 +514,7 @@ hastacheFile conf file_name context =
 
 -- | Render Hastache template from ByteString
 hastacheStrBuilder :: (MonadIO m) => 
-       MuConfig         -- ^ Configuration
+       MuConfig m       -- ^ Configuration
     -> ByteString       -- ^ Template
     -> MuContext m      -- ^ Context
     -> m BSB.Builder
@@ -525,7 +525,7 @@ hastacheStrBuilder conf str context = do
 
 -- | Render Hastache template from file
 hastacheFileBuilder :: (MonadIO m) => 
-       MuConfig         -- ^ Configuration
+       MuConfig m       -- ^ Configuration
     -> FilePath         -- ^ Template file name
     -> MuContext m      -- ^ Context
     -> m BSB.Builder
