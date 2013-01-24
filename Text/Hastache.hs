@@ -29,7 +29,7 @@ main = do
       Left err  -> hPutStrLn stderr err
       Right res -> LZ.putStrLn res
     where
-    template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages you {{fool}}.\"
+    template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\"
     context \"name\"   = return $ MuVariable \"Haskell\"
     context \"unread\" = return $ MuVariable (100 :: Int)
     context var      = throwError $ \"Var: \" ++ var  ++ \" not found!\"
