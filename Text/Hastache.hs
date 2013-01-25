@@ -253,16 +253,16 @@ emptyEscape = id
 
 {- | Default config: HTML escape function, current directory as 
      template directory, template file extension not specified -}
-defaultConfig :: MonadIO m => MuConfig m
-defaultConfig = MuConfig { 
+defaultConfig :: MuConfig IO
+defaultConfig = MuConfig {
     muEscapeFunc = htmlEscape,
     muTemplateFileDir = Nothing,
     muTemplateFileExt = Nothing,
     muTemplateRead = defaultTemplateRead
     }
 
-defaultTemplateRead :: MonadIO m => FilePath -> m (Maybe ByteString)
-defaultTemplateRead fullFileName = liftIO $ do
+defaultTemplateRead :: FilePath -> IO (Maybe ByteString)
+defaultTemplateRead fullFileName = do
   fe <- doesFileExist fullFileName
   if fe
     then Just <$> readFile fullFileName
