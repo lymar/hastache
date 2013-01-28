@@ -87,6 +87,7 @@ import Data.AEq (AEq,(~==))
 import Data.ByteString hiding (map, foldl1)
 import Data.ByteString.Char8 (readInt)
 import Data.Char (ord)
+import Data.Functor ((<$>))
 import Data.Int
 import Data.IORef
 import Data.Maybe (isJust)
@@ -100,6 +101,7 @@ import System.FilePath (combine)
 import qualified Blaze.ByteString.Builder as BSB
 import qualified Codec.Binary.UTF8.String as SU
 import qualified Data.ByteString.Lazy as LZ
+import qualified Data.Foldable as F
 import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TextEncoding
@@ -194,8 +196,11 @@ data MuConfig = MuConfig {
         -- ^ Escape function ('htmlEscape', 'emptyEscape' etc.)
     muTemplateFileDir   :: Maybe FilePath,
         -- ^ Directory for search partial templates ({{> templateName}})
-    muTemplateFileExt   :: Maybe String
+    muTemplateFileExt   :: Maybe String,
         -- ^ Partial template files extension
+    muTemplateRead      :: FilePath -> IO (Maybe ByteString)
+        -- ^ Template retrieval function. 'Nothing' indicates that the
+        --   template could not be found.
     }
 
 -- | Convert String to UTF-8 Bytestring
@@ -246,8 +251,16 @@ defaultConfig :: MuConfig
 defaultConfig = MuConfig { 
     muEscapeFunc = htmlEscape,
     muTemplateFileDir = Nothing,
-    muTemplateFileExt = Nothing
-    } 
+    muTemplateFileExt = Nothing,
+    muTemplateRead = defaultTemplateRead
+    }
+
+defaultTemplateRead :: FilePath -> IO (Maybe ByteString)
+defaultTemplateRead fullFileName = do
+  fe <- doesFileExist fullFileName
+  if fe
+    then Just <$> readFile fullFileName
+    else return Nothing
 
 defOTag = "{{" :: ByteString
 defCTag = "}}" :: ByteString
@@ -457,10 +470,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                 Nothing -> fileName
                 Just path -> combine path fileName
         in do
-            fe <- liftIO $ doesFileExist fullFileName
-            when fe $ do
-                cnt <- liftIO $ readFile fullFileName
-                next cnt
+            F.mapM_ next =<< liftIO (muTemplateRead conf fullFileName)
             next (trim' afterClose)
     -- variable
     | otherwise = do
