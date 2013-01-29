@@ -16,18 +16,23 @@ See homepage for examples of usage: <http://github.com/lymar/hastache>
 Simplest example:
 
 @
-import Text.Hastache 
-import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy as LZ 
+import Text.Hastache
+import Text.Hastache.Context
+import qualified Data.ByteString.Lazy.Char8 as LZ
+import System.IO
+import Control.Monad.Error
 
-main = do 
-    res <- hastacheStr defaultConfig (encodeStr template)  
-        (mkStrContext context) 
-    LZ.putStrLn res 
-    where 
-    template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\" 
-    context \"name\" = MuVariable \"Haskell\"
-    context \"unread\" = MuVariable (100 :: Int)
+main = do
+    r <- runErrorT $ hastacheStr defaultConfig (encodeStr template)
+                                 (mkStrContext context)
+    case r of
+      Left err  -> hPutStrLn stderr err
+      Right res -> LZ.putStrLn res
+    where
+    template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\"
+    context \"name\"   = return $ MuVariable \"Haskell\"
+    context \"unread\" = return $ MuVariable (100 :: Int)
+    context var      = throwError $ \"Var: \" ++ var  ++ \" not found!\"
 @
 
 Result:
@@ -80,9 +85,10 @@ module Text.Hastache (
     , decodeStrLBS
     ) where 
 
-import Control.Monad (guard, when)
+import Control.Monad (guard, when, mplus, mzero, liftM )
 import Control.Monad.Reader (ask, runReaderT, MonadReader, ReaderT)
 import Control.Monad.Trans (lift, liftIO, MonadIO)
+import Control.Monad.Trans.Maybe (MaybeT(MaybeT), runMaybeT)
 import Data.AEq (AEq,(~==))
 import Data.ByteString hiding (map, foldl1)
 import Data.ByteString.Char8 (readInt)
@@ -114,9 +120,9 @@ x ~> f = f x
 infixl 9 ~>
 
 -- | Data for Hastache variable
-type MuContext m = 
-    ByteString  -- ^ Variable name
-    -> MuType m -- ^ Value
+type MuContext m =
+    ByteString      -- ^ Variable name
+    -> m (MuType m) -- ^ Value
 
 class Show a => MuVar a where
     -- | Convert to Lazy ByteString
@@ -191,14 +197,14 @@ instance Show (MuType m) where
     show (MuLambdaM _) = "MuLambdaM <..>"
     show MuNothing = "MuNothing"
 
-data MuConfig = MuConfig {
+data MuConfig m = MuConfig {
     muEscapeFunc        :: LZ.ByteString -> LZ.ByteString, 
         -- ^ Escape function ('htmlEscape', 'emptyEscape' etc.)
     muTemplateFileDir   :: Maybe FilePath,
         -- ^ Directory for search partial templates ({{> templateName}})
     muTemplateFileExt   :: Maybe String,
         -- ^ Partial template files extension
-    muTemplateRead      :: FilePath -> IO (Maybe ByteString)
+    muTemplateRead      :: FilePath -> m (Maybe ByteString)
         -- ^ Template retrieval function. 'Nothing' indicates that the
         --   template could not be found.
     }
@@ -247,8 +253,8 @@ emptyEscape = id
 
 {- | Default config: HTML escape function, current directory as 
      template directory, template file extension not specified -}
-defaultConfig :: MuConfig 
-defaultConfig = MuConfig { 
+defaultConfig :: MuConfig IO
+defaultConfig = MuConfig {
     muEscapeFunc = htmlEscape,
     muTemplateFileDir = Nothing,
     muTemplateFileExt = Nothing,
@@ -289,34 +295,38 @@ toLBS :: ByteString -> LZ.ByteString
 toLBS v = LZ.fromChunks [v]
 
 
-readVar :: MonadIO m => [MuContext m] -> ByteString -> LZ.ByteString
-readVar [] _ = LZ.empty
-readVar (context:parentCtx) name =
-    case context name of
-        MuVariable a -> toLByteString a
-        MuBool a -> show a ~> encodeStr ~> toLBS
-        MuNothing -> case tryFindArrayItem context name of
+readVar :: MonadIO m => [MuContext m] -> ByteString -> m LZ.ByteString
+readVar [] _ = return LZ.empty
+readVar (context:parentCtx) name = do
+    muType <- context name
+    case muType of
+        MuVariable a -> return $ toLByteString a
+        MuBool a -> return $ show a ~> encodeStr ~> toLBS
+        MuNothing -> do
+          mb <- runMaybeT $ tryFindArrayItem context name
+          case mb of
             Just (nctx,nn) -> readVar [nctx] nn
             _ -> readVar parentCtx name
-        _ -> LZ.empty
+        _ -> return LZ.empty
 
 tryFindArrayItem :: MonadIO m => 
        MuContext m
-    -> ByteString 
-    -> Maybe (MuContext m, ByteString)
+    -> ByteString
+    -> MaybeT m (MuContext m, ByteString)
 tryFindArrayItem context name = do
     guard $ length idx > 1
-    (idx,nxt) <- readInt $ tail idx
+    (idx,nxt) <- MaybeT $ return $ readInt $ tail idx
     guard $ idx >= 0
     guard $ (null nxt) || ((head nxt) == (ord8 '.'))
-    case context nm of
+    muType <- lift $ context nm
+    case muType of
         MuList l -> do
             guard $ idx < (List.length l)
             let ncxt = l !! idx
-            if null nxt 
-                then Just (ncxt, dotStr) -- {{some.0}}
-                else Just (ncxt, tail nxt) -- {{some.0.field}}
-        _ -> Nothing
+            if null nxt
+                then return (ncxt, dotStr) -- {{some.0}}
+                else return (ncxt, tail nxt) -- {{some.0.field}}
+        _ -> mzero
     where
     (nm,idx) = breakSubstring dotStr name
     dotStr = "."
@@ -359,7 +369,7 @@ processBlock :: MonadIO m =>
     -> [MuContext m] 
     -> ByteString 
     -> ByteString 
-    -> MuConfig 
+    -> MuConfig m
     -> ReaderT (IORef BSB.Builder) m ()
 processBlock str contexts otag ctag conf = 
     case findBlock str otag ctag of
@@ -377,14 +387,14 @@ renderBlock :: MonadIO m =>
     -> ByteString 
     -> ByteString
     -> ByteString 
-    -> MuConfig 
+    -> MuConfig m
     -> ReaderT (IORef BSB.Builder) m ()
 renderBlock contexts symb inTag afterClose otag ctag conf
     -- comment
     | symb == ord8 '!' = next afterClose
     -- unescape variable
     | symb == ord8 '&' || (symb == ord8 '{' && otag == defOTag) = do
-        readVar contexts (tail inTag ~> trimAll) ~> addResLZ
+        addResLZ =<< lift (readVar contexts (tail inTag ~> trimAll))
         next afterClose
     -- section, inverted section
     | symb == ord8 '#' || symb == ord8 '^' = 
@@ -402,22 +412,21 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                             then dropNL afterSection'
                             else afterSection'
                     tlInTag = tail inTag
-                    readContext' = map ($ tlInTag) contexts 
-                        ~> List.find (not . isMuNothing)
+                    readContext' = MaybeT $ liftM (List.find (not . isMuNothing)) $
+                                     mapM ($ tlInTag) contexts
                     readContextWithIdx = do
-                        Just (ctx,name) <- map (
-                            \c -> tryFindArrayItem c tlInTag) 
-                            contexts ~> List.find isJust
-                        Just $ ctx name
-                    readContext = case readContext' of
-                        Just a -> Just a
-                        Nothing -> readContextWithIdx
-                    processAndNext = do 
+                      (ctx,name) <- Prelude.foldr mplus mzero $
+                                    map (\c -> tryFindArrayItem c tlInTag) contexts
+                      lift $ ctx name
+                    readContext = readContext' `mplus` readContextWithIdx
+                    processAndNext = do
                         processBlock sectionContent contexts otag ctag conf
                         next afterSection
-                in 
+                in do
+                mbCtx <- lift $ runMaybeT readContext
                 if symb == ord8 '#'
-                    then case readContext of -- section
+                    then
+                      case mbCtx of -- section
                         Just (MuList []) -> next afterSection
                         Just (MuList b) -> do
                             mapM_ (\c -> processBlock sectionContent
@@ -435,7 +444,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                             toLByteString res ~> addResLZ
                             next afterSection
                         _ -> next afterSection
-                    else case readContext of -- inverted section
+                    else case mbCtx of -- inverted section
                         Just (MuList []) -> processAndNext
                         Just (MuBool False) -> processAndNext
                         Just (MuVariable a) -> if isEmpty a 
@@ -470,11 +479,12 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                 Nothing -> fileName
                 Just path -> combine path fileName
         in do
-            F.mapM_ next =<< liftIO (muTemplateRead conf fullFileName)
+            F.mapM_ next =<< lift (muTemplateRead conf fullFileName)
             next (trim' afterClose)
     -- variable
     | otherwise = do
-        readVar contexts (trimAll inTag) ~> muEscapeFunc conf ~> addResLZ
+        addResLZ . muEscapeFunc conf =<<
+          lift (readVar contexts $ trimAll inTag)
         next afterClose
     where
     next t = processBlock t contexts otag ctag conf
@@ -486,7 +496,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
 
 -- | Render Hastache template from ByteString
 hastacheStr :: (MonadIO m) => 
-       MuConfig         -- ^ Configuration
+       MuConfig m       -- ^ Configuration
     -> ByteString       -- ^ Template
     -> MuContext m      -- ^ Context
     -> m LZ.ByteString
@@ -495,7 +505,7 @@ hastacheStr conf str context =
 
 -- | Render Hastache template from file
 hastacheFile :: (MonadIO m) => 
-       MuConfig         -- ^ Configuration
+       MuConfig m       -- ^ Configuration
     -> FilePath         -- ^ Template file name
     -> MuContext m      -- ^ Context
     -> m LZ.ByteString
@@ -504,7 +514,7 @@ hastacheFile conf file_name context =
 
 -- | Render Hastache template from ByteString
 hastacheStrBuilder :: (MonadIO m) => 
-       MuConfig         -- ^ Configuration
+       MuConfig m       -- ^ Configuration
     -> ByteString       -- ^ Template
     -> MuContext m      -- ^ Context
     -> m BSB.Builder
@@ -515,7 +525,7 @@ hastacheStrBuilder conf str context = do
 
 -- | Render Hastache template from file
 hastacheFileBuilder :: (MonadIO m) => 
-       MuConfig         -- ^ Configuration
+       MuConfig m       -- ^ Configuration
     -> FilePath         -- ^ Template file name
     -> MuContext m      -- ^ Context
     -> m BSB.Builder
