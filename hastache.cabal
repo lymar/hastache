@@ -48,3 +48,17 @@ library
 source-repository head
   type:     git
   location: http://github.com/lymar/hastache
+
+test-suite test-hastache
+  type:           exitcode-stdio-1.0
+  main-is:        test.hs
+  hs-source-dirs: tests
+
+  build-depends:
+    hastache
+   ,base == 4.*
+   ,mtl
+   ,HUnit
+   ,text
+   ,bytestring
+   ,syb
