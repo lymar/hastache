@@ -2,6 +2,7 @@
 module Main where
 
 import Control.Monad
+import Control.Monad.Error
 import Control.Monad.Writer
 import Data.Char
 import Data.Data
@@ -34,7 +35,7 @@ commentsTest = do
 -- Variables
 variablesTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
-        (mkStrContext (return . context))
+        (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
@@ -71,7 +72,7 @@ variablesTest = do
 -- Show/hide sections
 showHideSectionsTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
-        (mkStrContext (return . context))
+        (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
@@ -125,7 +126,7 @@ showHideSectionsTest = do
 -- Render list
 listSectionTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
-        (mkStrContext (return . context))
+        (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
@@ -137,7 +138,7 @@ listSectionTest = do
         \inline {{#section}}[{{name}}]{{/section}}\n\
         \"
     context "section" = MuList $ map nameCtx ["Neo", "Morpheus", "Trinity"]
-    nameCtx name = mkStrContext (\"name" -> return $ MuVariable name)
+    nameCtx name = mkStrContext (\"name" -> MuVariable name)
 
     testRes = "\
         \text 1\n\
@@ -151,7 +152,7 @@ listSectionTest = do
 -- Show/hide block according to boolean variable
 boolSectionTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
-        (mkStrContext (return . context))
+        (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
@@ -184,7 +185,7 @@ boolSectionTest = do
 -- Transorm section
 lambdaSectionTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
-        (mkStrContext (return . context))
+        (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
@@ -207,12 +208,8 @@ lambdaMSectionTest = do
     assertEqualStr "monad state correctness" (decodeStr writerState)
         testMonad
     where
-    monadicFunction = do
-        res <- hastacheStr defaultConfig
-                             {muTemplateRead = liftIO . muTemplateRead defaultConfig}
-                           (encodeStr template)
-                           (mkStrContext (return . context))
-        return res
+    monadicFunction = hastacheStr defaultConfig (encodeStr template)
+            (mkStrContext context)
     template = "\
         \[{{#mf}}abc{{/mf}}]\n\
         \[{{#mf}}def{{/mf}}]\n\
@@ -226,10 +223,25 @@ lambdaMSectionTest = do
         \"
     testMonad = "abcdef"
 
+-- Monadic context function
+monadicContextTest = do
+    r <- runErrorT $ hastacheStr defaultConfig (encodeStr template)
+        (mkStrContextM context)
+    let { res = case r of
+        Left err  -> "error: " ++ err
+        Right res -> decodeStrLBS res }
+    assertEqualStr resCorrectness res testRes
+    where
+    template = "Hello, {{name}}! You have {{unread}} unread messages. {{some}}"
+    context "name"   = return $ MuVariable "Haskell"
+    context "unread" = return $ MuVariable (100 :: Int)
+    context var      = throwError $ "{{" ++ var  ++ "}} not found!"
+    testRes = "error: {{some}} not found!"
+
 -- Change delimiters
 setDelimiterTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
-        (mkStrContext (return . context))
+        (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
@@ -254,7 +266,7 @@ setDelimiterTest = do
 -- Render external (partial) template file
 partialsTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
-        (mkStrContext (return . context))
+        (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
@@ -353,7 +365,7 @@ genericContextTest = do
 -- Up-level context from nested block
 nestedContextTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
-        (mkStrContext (return . context))
+        (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
@@ -364,7 +376,7 @@ nestedContextTest = do
         \"
     context "section" = MuList $ map elemCtx ["elem 1", "elem 2"]
     context "top" = MuVariable "top"
-    elemCtx vl = mkStrContext (\v -> return $ case v of
+    elemCtx vl = mkStrContext (\v -> case v of
         "val" -> MuVariable vl
         _ -> MuNothing
         )
@@ -418,7 +430,7 @@ nestedGenericContextTest = do
 -- Accessing array item by index
 arrayItemsTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
-        (mkStrContext (return . context))
+        (mkStrContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
     template = "\
@@ -429,8 +441,8 @@ arrayItemsTest = do
     context "section" = MuList $ map nameCtx ["Neo", "Morpheus", "Trinity"]
     context "flags" = MuList $ map flagCtx [True, False]
     context n = MuNothing
-    nameCtx name = mkStrContext (\"name" -> return $ MuVariable name)
-    flagCtx val = mkStrContext (\"val" -> return $ MuBool val)
+    nameCtx name = mkStrContext (\"name" -> MuVariable name)
+    flagCtx val = mkStrContext (\"val" -> MuBool val)
 
     testRes = "\
         \Neo Morpheus Trinity\n\
@@ -467,20 +479,22 @@ arrayItemsTestGeneric = do
         \"
 
 tests = TestList [
-     TestLabel "Comments test" (TestCase commentsTest)
-    ,TestLabel "Variables test" (TestCase variablesTest)
-    ,TestLabel "Show/hide sections test" (TestCase showHideSectionsTest)
-    ,TestLabel "List test" (TestCase listSectionTest)
-    ,TestLabel "Bool test" (TestCase boolSectionTest)
-    ,TestLabel "Lambda test" (TestCase lambdaSectionTest)
-    ,TestLabel "LambdaM test" (TestCase lambdaMSectionTest)
-    ,TestLabel "Set delimiter test" (TestCase setDelimiterTest)
-    ,TestLabel "Partials test" (TestCase partialsTest)
-    ,TestLabel "Generic context test" (TestCase genericContextTest)
-    ,TestLabel "Nested context test" (TestCase nestedContextTest)
-    ,TestLabel "Nested generic context test" (TestCase nestedGenericContextTest)
-    ,TestLabel "Accessing array item by index" (TestCase arrayItemsTest)
-    ,TestLabel "Accessing array item by index (generic version)" 
+      TestLabel "Comments test" (TestCase commentsTest)
+    , TestLabel "Variables test" (TestCase variablesTest)
+    , TestLabel "Show/hide sections test" (TestCase showHideSectionsTest)
+    , TestLabel "List test" (TestCase listSectionTest)
+    , TestLabel "Bool test" (TestCase boolSectionTest)
+    , TestLabel "Lambda test" (TestCase lambdaSectionTest)
+    , TestLabel "LambdaM test" (TestCase lambdaMSectionTest)
+    , TestLabel "Monadic context test" (TestCase monadicContextTest)
+    , TestLabel "Set delimiter test" (TestCase setDelimiterTest)
+    , TestLabel "Partials test" (TestCase partialsTest)
+    , TestLabel "Generic context test" (TestCase genericContextTest)
+    , TestLabel "Nested context test" (TestCase nestedContextTest)
+    , TestLabel "Nested generic context test" 
+                                        (TestCase nestedGenericContextTest)
+    , TestLabel "Accessing array item by index" (TestCase arrayItemsTest)
+    , TestLabel "Accessing array item by index (generic version)" 
         (TestCase arrayItemsTestGeneric)
     ]
 
