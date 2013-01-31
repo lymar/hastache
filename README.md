@@ -20,7 +20,7 @@ See [Hastache hackage page](http://hackage.haskell.org/package/hastache).
 ```haskell
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy as LZ 
+import qualified Data.ByteString.Lazy.Char8 as LZ 
 
 main = hastacheStr defaultConfig (encodeStr template) (mkStrContext context)
     >>= LZ.putStrLn
@@ -215,7 +215,7 @@ Hello, dlrow!
 {-# LANGUAGE FlexibleContexts #-}
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy as LZ 
+import qualified Data.ByteString.Lazy.Char8 as LZ 
 import Control.Monad.State 
 
 main = run >>= LZ.putStrLn

@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy as LZ 
+import qualified Data.ByteString.Lazy.Char8 as LZ 
 import Data.Data 
 import Data.Generics 
 
