@@ -1,9 +1,9 @@
 name:            hastache
-version:         0.4.2
+version:         0.5.0
 license:         BSD3
 license-file:    LICENSE
 category:        Text
-copyright:       Sergey S Lymar (c) 2011-2012
+copyright:       Sergey S Lymar (c) 2011-2013
 author:          Sergey S Lymar <sergey.lymar@gmail.com>
 maintainer:      Sergey S Lymar <sergey.lymar@gmail.com>
 stability:       experimental
