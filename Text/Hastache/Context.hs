@@ -31,7 +31,7 @@ x ~> f = f $ x
 infixl 9 ~>
 
 -- | Make Hastache context from String -> MuType function
-mkStrContext :: Monad m => (String -> MuType m) -> MuContext m
+mkStrContext :: Monad m => (String -> m (MuType m)) -> MuContext m
 mkStrContext f a = decodeStr a ~> f
 
 {- | 
@@ -242,7 +242,7 @@ procField =
     muLambdaMBSLBS :: (BS.ByteString -> m LBS.ByteString) -> TD m
     muLambdaMBSLBS f = MuLambdaM f ~> TSimple
 
-convertGenTempToContext :: TD t -> MuContext t
+convertGenTempToContext :: Monad m => TD m -> MuContext m
 convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
     where
     mkMap name m (TSimple t) = Map.insert (encodeStr name) t m
@@ -257,9 +257,9 @@ convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
         then concat [name, ".", newName]
         else newName
     foldTObj name m (fn, fv) = mkMap (mkName name fn) m fv
-    
-    mkMapContext m a = case Map.lookup a m of
-        Nothing -> 
+
+    mkMapContext m a = return $ case Map.lookup a m of
+        Nothing ->
             case a == dotBS of
                 True -> 
                     case Map.lookup BS.empty m of
