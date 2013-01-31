@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 -- Module:      Text.Hastache.Context
--- Copyright:   Sergey S Lymar (c) 2011 
+-- Copyright:   Sergey S Lymar (c) 2011-2013 
 -- License:     BSD3
 -- Maintainer:  Sergey S Lymar <sergey.lymar@gmail.com>
 -- Stability:   experimental
@@ -11,6 +11,7 @@ Hastache context helpers
 -}
 module Text.Hastache.Context (
       mkStrContext
+    , mkStrContextM
     , mkGenericContext
     ) where 
 
@@ -31,8 +32,12 @@ x ~> f = f $ x
 infixl 9 ~>
 
 -- | Make Hastache context from String -> MuType function
-mkStrContext :: Monad m => (String -> m (MuType m)) -> MuContext m
-mkStrContext f a = decodeStr a ~> f
+mkStrContext :: Monad m => (String -> MuType m) -> MuContext m
+mkStrContext f a = decodeStr a ~> f ~> return
+
+-- | Make Hastache context from monadic String -> MuType function
+mkStrContextM :: Monad m => (String -> m (MuType m)) -> MuContext m
+mkStrContextM f a = decodeStr a ~> f
 
 {- | 
 Make Hastache context from Data.Data deriving type
