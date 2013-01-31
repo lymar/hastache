@@ -1,7 +1,7 @@
 {-# LANGUAGE ExistentialQuantification, FlexibleInstances, IncoherentInstances,
              OverloadedStrings #-}
 -- Module:      Text.Hastache
--- Copyright:   Sergey S Lymar (c) 2011 
+-- Copyright:   Sergey S Lymar (c) 2011-2013 
 -- License:     BSD3
 -- Maintainer:  Sergey S Lymar <sergey.lymar@gmail.com>
 -- Stability:   experimental
@@ -16,23 +16,18 @@ See homepage for examples of usage: <http://github.com/lymar/hastache>
 Simplest example:
 
 @
-import Text.Hastache
-import Text.Hastache.Context
-import qualified Data.ByteString.Lazy.Char8 as LZ
-import System.IO
-import Control.Monad.Error
+import Text.Hastache 
+import Text.Hastache.Context 
+import qualified Data.ByteString.Lazy.Char8 as LZ 
 
-main = do
-    r <- runErrorT $ hastacheStr defaultConfig (encodeStr template)
-                                 (mkStrContext context)
-    case r of
-      Left err  -> hPutStrLn stderr err
-      Right res -> LZ.putStrLn res
-    where
-    template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\"
-    context \"name\"   = return $ MuVariable \"Haskell\"
-    context \"unread\" = return $ MuVariable (100 :: Int)
-    context var      = throwError $ \"Var: \" ++ var  ++ \" not found!\"
+main = do 
+    res <- hastacheStr defaultConfig (encodeStr template)  
+        (mkStrContext context) 
+    LZ.putStrLn res 
+  where 
+    template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\" 
+    context \"name\" = MuVariable \"Haskell\"
+    context \"unread\" = MuVariable (100 :: Int)
 @
 
 Result:
@@ -48,7 +43,7 @@ Using Generics:
 @
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy as LZ 
+import qualified Data.ByteString.Lazy.Char8 as LZ 
 import Data.Data 
 import Data.Generics 
  
@@ -61,7 +56,7 @@ main = do
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkGenericContext inf) 
     LZ.putStrLn res 
-    where 
+  where 
     template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\"
     inf = Info \"Haskell\" 100
 @
@@ -253,20 +248,20 @@ emptyEscape = id
 
 {- | Default config: HTML escape function, current directory as 
      template directory, template file extension not specified -}
-defaultConfig :: MuConfig IO
+defaultConfig :: MonadIO m => MuConfig m
 defaultConfig = MuConfig {
     muEscapeFunc = htmlEscape,
     muTemplateFileDir = Nothing,
     muTemplateFileExt = Nothing,
-    muTemplateRead = defaultTemplateRead
+    muTemplateRead = liftIO . defaultTemplateRead
     }
 
 defaultTemplateRead :: FilePath -> IO (Maybe ByteString)
 defaultTemplateRead fullFileName = do
-  fe <- doesFileExist fullFileName
-  if fe
-    then Just <$> readFile fullFileName
-    else return Nothing
+    fe <- doesFileExist fullFileName
+    if fe
+        then Just <$> readFile fullFileName
+        else return Nothing
 
 defOTag = "{{" :: ByteString
 defCTag = "}}" :: ByteString
@@ -293,7 +288,6 @@ findBlock str otag ctag = do
 
 toLBS :: ByteString -> LZ.ByteString
 toLBS v = LZ.fromChunks [v]
-
 
 readVar :: MonadIO m => [MuContext m] -> ByteString -> m LZ.ByteString
 readVar [] _ = return LZ.empty
