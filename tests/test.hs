@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Tests where
+module Main where
 
 import Control.Monad
 import Control.Monad.Writer
@@ -208,8 +208,10 @@ lambdaMSectionTest = do
         testMonad
     where
     monadicFunction = do
-        res <- hastacheStr defaultConfig (encodeStr template)
-            (mkStrContext (return . context))
+        res <- hastacheStr defaultConfig
+                             {muTemplateRead = liftIO . muTemplateRead defaultConfig}
+                           (encodeStr template)
+                           (mkStrContext (return . context))
         return res
     template = "\
         \[{{#mf}}abc{{/mf}}]\n\
