@@ -170,7 +170,7 @@ UPPER (MONADIC)
 @
 
 -}
-mkGenericContext :: (Monad m, Data a, Typeable1 m) => a -> MuContext m
+mkGenericContext :: (Monad m, Data a, Typeable m) => a -> MuContext m
 mkGenericContext val = toGenTemp val ~> convertGenTempToContext
     
 data TD m = 
@@ -180,12 +180,12 @@ data TD m =
     | TUnknown
     deriving (Show)
 
-toGenTemp :: (Data a, Monad m, Typeable1 m) => a -> TD m
+toGenTemp :: (Data a, Monad m, Typeable m) => a -> TD m
 toGenTemp a = zip fields (gmapQ procField a) ~> TObj
     where
     fields = toConstr a ~> constrFields
 
-procField :: (Data a, Monad m, Typeable1 m) => a -> TD m
+procField :: (Data a, Monad m, Typeable m) => a -> TD m
 procField = 
     obj
     `ext1Q` list
