@@ -172,7 +172,7 @@ UPPER (MONADIC)
 
 -}
                     
-#if MIN_VERSION_base(4,6,0)                    
+#if MIN_VERSION_base(4,7,0)                    
 mkGenericContext :: (Monad m, Data a, Typeable m) => a -> MuContext m
 #else                    
 mkGenericContext :: (Monad m, Data a, Typeable1 m) => a -> MuContext m
@@ -186,7 +186,7 @@ data TD m =
     | TUnknown
     deriving (Show)
 
-#if MIN_VERSION_base(4,6,0)                                 
+#if MIN_VERSION_base(4,7,0)                                 
 toGenTemp :: (Data a, Monad m, Typeable m) => a -> TD m
 #else
 toGenTemp :: (Data a, Monad m, Typeable1 m) => a -> TD m
@@ -195,7 +195,7 @@ toGenTemp a = zip fields (gmapQ procField a) ~> TObj
     where
     fields = toConstr a ~> constrFields
 
-#if MIN_VERSION_base(4,6,0) 
+#if MIN_VERSION_base(4,7,0) 
 procField :: (Data a, Monad m, Typeable m) => a -> TD m
 #else
 procField :: (Data a, Monad m, Typeable1 m) => a -> TD m
