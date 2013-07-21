@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
 -- Module:      Text.Hastache.Context
 -- Copyright:   Sergey S Lymar (c) 2011-2013 
 -- License:     BSD3
@@ -170,7 +171,12 @@ UPPER (MONADIC)
 @
 
 -}
+                    
+#if MIN_VERSION_base(4,7,0)                    
+mkGenericContext :: (Monad m, Data a, Typeable m) => a -> MuContext m
+#else                    
 mkGenericContext :: (Monad m, Data a, Typeable1 m) => a -> MuContext m
+#endif                    
 mkGenericContext val = toGenTemp val ~> convertGenTempToContext
     
 data TD m = 
@@ -180,12 +186,20 @@ data TD m =
     | TUnknown
     deriving (Show)
 
+#if MIN_VERSION_base(4,7,0)                                 
+toGenTemp :: (Data a, Monad m, Typeable m) => a -> TD m
+#else
 toGenTemp :: (Data a, Monad m, Typeable1 m) => a -> TD m
+#endif             
 toGenTemp a = zip fields (gmapQ procField a) ~> TObj
     where
     fields = toConstr a ~> constrFields
 
+#if MIN_VERSION_base(4,7,0) 
+procField :: (Data a, Monad m, Typeable m) => a -> TD m
+#else
 procField :: (Data a, Monad m, Typeable1 m) => a -> TD m
+#endif
 procField = 
     obj
     `ext1Q` list
