@@ -7,9 +7,6 @@ copyright:       Sergey S Lymar (c) 2011-2013
 author:          Sergey S Lymar <sergey.lymar@gmail.com>
 maintainer:      Sergey S Lymar <sergey.lymar@gmail.com>
 stability:       experimental
-tested-with:     
-                 GHC == 7.0.2,
-                 GHC == 7.0.3
 synopsis:        Haskell implementation of Mustache templates
 cabal-version:   >= 1.8
 homepage:        http://github.com/lymar/hastache
@@ -19,7 +16,7 @@ description:
     Haskell implementation of Mustache templates (<http://mustache.github.com/>).
     .
     See homepage for examples of usage: <http://github.com/lymar/hastache>
-    
+
 extra-source-files:
     tests/partFile
     tests/RunTest.sh
@@ -57,6 +54,7 @@ test-suite test-hastache
   build-depends:
     hastache
    ,base == 4.*
+   ,directory
    ,mtl
    ,HUnit
    ,text

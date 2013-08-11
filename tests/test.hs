@@ -7,6 +7,8 @@ import Control.Monad.Writer
 import Data.Char
 import Data.Data
 import Data.Generics
+import System.Directory
+import System.Exit
 import Test.HUnit
 import Text.Hastache
 import Text.Hastache.Context
@@ -56,7 +58,7 @@ variablesTest = do
     context "Text" = MuVariable (T.pack "hello - привет")
     context "String" = MuVariable "hello - привет"
     context "HtmlString" = MuVariable "<p>text (\\)</p>"
-    
+
     testRes  = "\
         \   Char:               [ Й ]            \n\
         \   Double:             [ 123.45 ]          \n\
@@ -108,7 +110,7 @@ showHideSectionsTest = do
     context "nonEmptyString" = MuVariable "some"
     context "nonEmptyInt" = MuVariable (1 :: Int)
     context "nonEmptyDouble" = MuVariable (1 :: Double)
-    
+
     testRes = "\
         \no context : Should render\n\
         \text 1\n\
@@ -174,7 +176,7 @@ boolSectionTest = do
     context "bool_true" = MuBool True
     context "bool_false" = MuBool False
     context "someval" = MuVariable "val"
-    
+
     testRes = "\
         \text 1\n\
         \   true: val \n\
@@ -194,7 +196,7 @@ lambdaSectionTest = do
         \text 2\n\
         \"
     context "function" = MuLambda BS.reverse
-    
+
     testRes = "\
         \text 1\n\
         \olleH\n\
@@ -254,7 +256,7 @@ setDelimiterTest = do
         \text 2\n\
         \"
     context "someVar" = MuVariable "some value"
-    
+
     testRes = "\
         \text 1\n\
         \some value\n\
@@ -275,7 +277,7 @@ partialsTest = do
         \text 2\n\
         \"
     context "name" = MuVariable "Neo"
-    
+
     testRes = "\
         \text 1\n\
         \Hi, Neo!\n\
@@ -287,7 +289,7 @@ data InternalData = InternalData {
     intDataField2   :: Int
     }
     deriving (Data, Typeable)
-    
+
 data SomeData = SomeData {
     someDataField1      :: String,
     someDataInternal    :: InternalData,
@@ -302,7 +304,7 @@ data SomeData = SomeData {
 
 -- Make hastache context from Data.Data deriving type
 genericContextTest = do
-    res <- hastacheStr defaultConfig (encodeStr template) 
+    res <- hastacheStr defaultConfig (encodeStr template)
         (mkGenericContext context)
     assertEqualStr resCorrectness (decodeStrLBS res) testRes
     where
@@ -330,7 +332,7 @@ genericContextTest = do
         \"
     context = SomeData {
         someDataField1 = "aaa",
-        someDataInternal = InternalData { 
+        someDataInternal = InternalData {
             intDataField1 = "zzz", intDataField2 = 100 },
         someDataList = [1,2,3],
         someDataObjList = [InternalData "a" 1, InternalData "b" 2,
@@ -340,7 +342,7 @@ genericContextTest = do
         someMuLambdaMBS = return . BS.reverse,
         someMuLambdaMS = return . map toUpper
         }
-    
+
     testRes = "\
         \text 1\n\
         \aaa zzz \n\
@@ -451,14 +453,14 @@ arrayItemsTest = do
         \"
 
 -- Accessing array item by index (generic version)
-data ArrayItemTest_Item = ArrayItemTest_Item { 
-    name :: String 
-    } deriving (Data, Typeable)    
+data ArrayItemTest_Item = ArrayItemTest_Item {
+    name :: String
+    } deriving (Data, Typeable)
 
-data ArrayItemTest_Container = ArrayItemTest_Container { 
+data ArrayItemTest_Container = ArrayItemTest_Container {
     items       :: [ArrayItemTest_Item],
     itemsStr    :: [String]
-    } deriving (Data, Typeable)    
+    } deriving (Data, Typeable)
 
 arrayItemsTestGeneric = do
     res <- hastacheStr defaultConfig (encodeStr template) context
@@ -491,19 +493,22 @@ tests = TestList [
     , TestLabel "Partials test" (TestCase partialsTest)
     , TestLabel "Generic context test" (TestCase genericContextTest)
     , TestLabel "Nested context test" (TestCase nestedContextTest)
-    , TestLabel "Nested generic context test" 
+    , TestLabel "Nested generic context test"
                                         (TestCase nestedGenericContextTest)
     , TestLabel "Accessing array item by index" (TestCase arrayItemsTest)
-    , TestLabel "Accessing array item by index (generic version)" 
+    , TestLabel "Accessing array item by index (generic version)"
         (TestCase arrayItemsTestGeneric)
     ]
 
 main = do
-    runTestTT tests
+    setCurrentDirectory "./tests/"
+    trs <- runTestTT tests
+    if (errors trs /= 0) || (failures trs /= 0)
+        then exitFailure
+        else exitSuccess
 
 assertEqualStr preface actual expected =
     unless (actual == expected) (assertFailure msg)
-    where 
+    where
     msg = (if null preface then "" else preface ++ "\n") ++
         "expected: \n" ++ expected ++ "\nbut got: \n" ++ actual
-
