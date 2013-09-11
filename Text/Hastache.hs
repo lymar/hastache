@@ -153,6 +153,7 @@ instance MuVar Word8   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
 instance MuVar Word16  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
 instance MuVar Word32  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
 instance MuVar Word64  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
+instance MuVar ()      where {toLByteString = withShowToLBS}
 
 instance MuVar Text.Text where 
     toLByteString t = TextEncoding.encodeUtf8 t ~> toLBS
@@ -171,6 +172,20 @@ instance MuVar a => MuVar [a] where
         cnvLst = map toLByteString a ~> 
                 LZ.intercalate (toLByteString ',')
         (<+>) = LZ.append
+
+
+instance MuVar a => MuVar (Maybe a) where
+    toLByteString (Just a) = toLByteString a
+    toLByteString  Nothing  = ""
+    isEmpty Nothing  = True
+    isEmpty (Just a) = isEmpty a
+
+instance (MuVar a, MuVar b) => MuVar (Either a b) where
+    toLByteString (Left  a) = toLByteString a
+    toLByteString (Right b) = toLByteString b
+    isEmpty (Left  a) = isEmpty a
+    isEmpty (Right b) = isEmpty b
+    
 
 instance MuVar [Char] where
     toLByteString k = k ~> encodeStr ~> toLBS
