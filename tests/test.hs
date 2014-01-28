@@ -480,6 +480,29 @@ arrayItemsTestGeneric = do
         \Bob Alice\n\
         \"
 
+-- Multiple constructors in generic contexts
+data Hero = Good { goodness :: Int }
+          | Evil { evilness :: Int }
+          deriving (Data, Typeable)
+
+data Heroes = Heroes { heroes :: [Hero] }
+            deriving (Data, Typeable)
+
+multipleConstrTest = do
+    res <- hastacheStr defaultConfig (encodeStr template)
+        (mkGenericContext context)
+    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    where
+    context  = Heroes [Good 4, Evil 2]
+    template = "\
+        \{{#heroes}}\
+        \{{#Good}}{{goodness}}{{/Good}}\
+        \{{#Evil}}{{evilness}}{{/Evil}}\
+        \{{/heroes}}\
+        \"
+    testRes = "42"
+
+
 tests = TestList [
       TestLabel "Comments test" (TestCase commentsTest)
     , TestLabel "Variables test" (TestCase variablesTest)
@@ -492,6 +515,8 @@ tests = TestList [
     , TestLabel "Set delimiter test" (TestCase setDelimiterTest)
     , TestLabel "Partials test" (TestCase partialsTest)
     , TestLabel "Generic context test" (TestCase genericContextTest)
+    , TestLabel "Multiple constructors in a generic context"
+        (TestCase multipleConstrTest)
     , TestLabel "Nested context test" (TestCase nestedContextTest)
     , TestLabel "Nested generic context test"
                                         (TestCase nestedGenericContextTest)

@@ -170,6 +170,20 @@ UPPER (MONADIC)
 )cidanom( esrever
 @
 
+Hastache also supports datatypes with multiple constructors:
+
+@
+data A = A { str :: String }
+       | B { num :: Int }
+
+{{#A}}
+A : {{str}}
+{{/A}}
+{{#B}}
+B : {{num}}
+{{/B}}
+@
+
 -}
                     
 #if MIN_VERSION_base(4,7,0)
