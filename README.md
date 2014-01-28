@@ -297,3 +297,4 @@ Bibliography:
 
  * [Hastache test](https://github.com/lymar/hastache/blob/master/tests/test.hs)
  * Real world example: [README.md file generator](https://github.com/lymar/hastache/blob/master/mkReadme.hs)
+ * [examples/ directory](https://github.com/lymar/hastache/tree/master/examples)
