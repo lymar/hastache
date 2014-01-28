@@ -172,11 +172,11 @@ UPPER (MONADIC)
 
 -}
                     
-#if MIN_VERSION_base(4,7,0)                    
+#if MIN_VERSION_base(4,7,0)
 mkGenericContext :: (Monad m, Data a, Typeable m) => a -> MuContext m
-#else                    
+#else
 mkGenericContext :: (Monad m, Data a, Typeable1 m) => a -> MuContext m
-#endif                    
+#endif
 mkGenericContext val = toGenTemp val ~> convertGenTempToContext
     
 data TD m = 
@@ -186,16 +186,17 @@ data TD m =
     | TUnknown
     deriving (Show)
 
-#if MIN_VERSION_base(4,7,0)                                 
+#if MIN_VERSION_base(4,7,0)
 toGenTemp :: (Data a, Monad m, Typeable m) => a -> TD m
 #else
 toGenTemp :: (Data a, Monad m, Typeable1 m) => a -> TD m
-#endif             
-toGenTemp a = zip fields (gmapQ procField a) ~> TObj
+#endif
+toGenTemp a = TObj $ conName : zip fields (gmapQ procField a)
     where
     fields = toConstr a ~> constrFields
+    conName = (toConstr a ~> showConstr, MuBool True ~> TSimple)
 
-#if MIN_VERSION_base(4,7,0) 
+#if MIN_VERSION_base(4,7,0)
 procField :: (Data a, Monad m, Typeable m) => a -> TD m
 #else
 procField :: (Data a, Monad m, Typeable1 m) => a -> TD m
@@ -233,7 +234,7 @@ procField =
     `extQ` muLambdaMBSLBS
     where
     obj a = case dataTypeRep (dataTypeOf a) of
-        AlgRep [c] -> toGenTemp a
+        AlgRep (_:_) -> toGenTemp a
         _ -> TUnknown
     list a = map procField a ~> TList
 
