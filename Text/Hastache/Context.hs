@@ -24,8 +24,9 @@ import Data.Word
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as Map
-import qualified Data.Text as Text
-import qualified Data.Text.Lazy as LText
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Lazy as TL
 
 import Text.Hastache
 
@@ -84,13 +85,25 @@ Supported field types:
  * Data.Text.Lazy.Text
  
  * Bool
+
+ * Data.Text.Text -> Data.Text.Text
+
+ * Data.Text.Text -> Data.Text.Lazy.Text
+
+ * Data.Text.Lazy.Text -> Data.Text.Lazy.Text
  
  * Data.ByteString.ByteString -> Data.ByteString.ByteString
  
  * String -> String
  
  * Data.ByteString.ByteString -> Data.ByteString.Lazy.ByteString
- 
+
+ * MonadIO m => Data.Text.Text -> m Data.Text.Text
+
+ * MonadIO m => Data.Text.Text -> m Data.Text.Lazy.Text
+
+ * MonadIO m => Data.Text.Lazy.Text -> m Data.Text.Lazy.Text 
+
  * MonadIO m => Data.ByteString.ByteString -> m Data.ByteString.ByteString
  
  * MonadIO m => String -> m String
@@ -235,14 +248,20 @@ procField =
     `extQ` (\(i::Word64)            -> MuVariable i ~> TSimple)
     `extQ` (\(i::BS.ByteString)     -> MuVariable i ~> TSimple)
     `extQ` (\(i::LBS.ByteString)    -> MuVariable i ~> TSimple)
-    `extQ` (\(i::Text.Text)         -> MuVariable i ~> TSimple)
-    `extQ` (\(i::LText.Text)        -> MuVariable i ~> TSimple)
+    `extQ` (\(i::T.Text)         -> MuVariable i ~> TSimple)
+    `extQ` (\(i::TL.Text)        -> MuVariable i ~> TSimple)
     `extQ` (\(i::Bool)              -> MuBool i ~> TSimple)
-    
+
+    `extQ` muLambdaTT
+    `extQ` muLambdaTTL
+    `extQ` muLambdaTLTL
     `extQ` muLambdaBSBS
     `extQ` muLambdaSS
     `extQ` muLambdaBSLBS
     
+    `extQ` muLambdaMTT
+    `extQ` muLambdaMTTL
+    `extQ` muLambdaMTLTL
     `extQ` muLambdaMBSBS
     `extQ` muLambdaMSS
     `extQ` muLambdaMBSLBS
@@ -252,29 +271,48 @@ procField =
         _ -> TUnknown
     list a = map procField a ~> TList
 
+    muLambdaTT :: (T.Text -> T.Text) -> TD m
+    muLambdaTT f = MuLambda f ~> TSimple
+
+    muLambdaTLTL :: (TL.Text -> TL.Text) -> TD m
+    muLambdaTLTL f = MuLambda (f . TL.fromStrict) ~> TSimple
+
+    muLambdaTTL :: (T.Text -> TL.Text) -> TD m
+    muLambdaTTL f = MuLambda f ~> TSimple
+
     muLambdaBSBS :: (BS.ByteString -> BS.ByteString) -> TD m
-    muLambdaBSBS f = MuLambda f ~> TSimple
+    muLambdaBSBS f = MuLambda (f . T.encodeUtf8) ~> TSimple
+
+    muLambdaBSLBS :: (BS.ByteString -> LBS.ByteString) -> TD m
+    muLambdaBSLBS f = MuLambda (f . T.encodeUtf8) ~> TSimple
 
     muLambdaSS :: (String -> String) -> TD m
     muLambdaSS f = MuLambda fd ~> TSimple
         where
         fd s = decodeStr s ~> f
 
-    muLambdaBSLBS :: (BS.ByteString -> LBS.ByteString) -> TD m
-    muLambdaBSLBS f = MuLambda f ~> TSimple
-
     -- monadic
 
+    muLambdaMTT :: (T.Text -> m T.Text) -> TD m
+    muLambdaMTT f = MuLambdaM f ~> TSimple
+
+    muLambdaMTLTL :: (TL.Text -> m TL.Text) -> TD m
+    muLambdaMTLTL f = MuLambdaM (f . TL.fromStrict) ~> TSimple
+
+    muLambdaMTTL :: (T.Text -> m TL.Text) -> TD m
+    muLambdaMTTL f = MuLambdaM f ~> TSimple
+        
     muLambdaMBSBS :: (BS.ByteString -> m BS.ByteString) -> TD m
-    muLambdaMBSBS f = MuLambdaM f ~> TSimple
+    muLambdaMBSBS f = MuLambdaM (f . T.encodeUtf8) ~> TSimple
+
+    muLambdaMBSLBS :: (BS.ByteString -> m LBS.ByteString) -> TD m
+    muLambdaMBSLBS f = MuLambdaM (f . T.encodeUtf8) ~> TSimple
 
     muLambdaMSS :: (String -> m String) -> TD m
     muLambdaMSS f = MuLambdaM fd ~> TSimple
         where
         fd s = decodeStr s ~> f
 
-    muLambdaMBSLBS :: (BS.ByteString -> m LBS.ByteString) -> TD m
-    muLambdaMBSLBS f = MuLambdaM f ~> TSimple
 
 convertGenTempToContext :: Monad m => TD m -> MuContext m
 convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
@@ -294,13 +332,13 @@ convertGenTempToContext v = mkMap "" Map.empty v ~> mkMapContext
 
     mkMapContext m a = return $ case Map.lookup a m of
         Nothing ->
-            case a == dotBS of
+            case a == dotT of
                 True -> 
-                    case Map.lookup BS.empty m of
+                    case Map.lookup T.empty m of
                         Nothing -> MuNothing
                         Just a -> a
                 _ -> MuNothing
         Just a -> a
 
-dotBS = encodeStr "."
-
+dotT :: T.Text
+dotT = T.singleton '.'

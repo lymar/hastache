@@ -1,10 +1,10 @@
 #!/usr/local/bin/runhaskell
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy.Char8 as LZ 
+import qualified Data.Text.Lazy.IO as TL 
 
 main = hastacheStr defaultConfig (encodeStr template) (mkStrContext context)
-    >>= LZ.putStrLn
+    >>= TL.putStrLn
 
 -- begin example
 template = "{{^messages}}No new messages{{/messages}}"

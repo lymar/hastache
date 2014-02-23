@@ -2,13 +2,13 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy.Char8 as LZ 
+import qualified Data.Text.Lazy.IO as TL 
 import Data.Data 
 import Data.Generics 
 
 -- begin example
 main = mapM_ (\(template,context) ->
-    hastacheStr defaultConfig (encodeStr template) context >>= LZ.putStrLn) 
+    hastacheStr defaultConfig (encodeStr template) context >>= TL.putStrLn) 
         [(template1, mkStrContext context1),
          (template1, context2),
          (template3, context3)]

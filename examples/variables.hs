@@ -2,10 +2,10 @@
 -- begin example
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy.Char8 as LZ 
+import qualified Data.Text.Lazy.IO as TL
 
 main = hastacheStr defaultConfig (encodeStr template) (mkStrContext context)
-    >>= LZ.putStrLn
+    >>= TL.putStrLn
 
 template = "Hello, {{name}}!\n\nYou have {{unread}} unread messages." 
 

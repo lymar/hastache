@@ -75,39 +75,39 @@ module Text.Hastache (
     , emptyEscape
     , defaultConfig
     , encodeStr
-    , encodeStrLBS
+    , encodeStrLT
     , decodeStr
-    , decodeStrLBS
+    , decodeStrLT
     ) where 
 
-import Control.Monad (guard, when, mplus, mzero, liftM )
+import Control.Monad (guard, mplus, mzero, liftM )
 import Control.Monad.Reader (ask, runReaderT, MonadReader, ReaderT)
 import Control.Monad.Trans (lift, liftIO, MonadIO)
 import Control.Monad.Trans.Maybe (MaybeT(MaybeT), runMaybeT)
 import Data.AEq (AEq,(~==))
-import Data.ByteString hiding (map, foldl1)
-import Data.ByteString.Char8 (readInt)
-import Data.Char (ord)
 import Data.Functor ((<$>))
 import Data.Int
 import Data.IORef
 import Data.Maybe (isJust)
 import Data.Monoid (mappend, mempty)
+import Data.Text hiding (map, foldl1)
+import Data.Text.IO
 import Data.Word
 import Prelude hiding (putStrLn, readFile, length, drop, tail, dropWhile, elem,
     head, last, reverse, take, span, null)
 import System.Directory (doesFileExist)
 import System.FilePath (combine)
 
-import qualified Blaze.ByteString.Builder as BSB
-import qualified Codec.Binary.UTF8.String as SU
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LZ
-import qualified Data.Foldable as F
 import qualified Data.List as List
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as TextEncoding
-import qualified Data.Text.Lazy as LText
-import qualified Data.Text.Lazy.Encoding as LTextEncoding
+import qualified Data.Text as T
+import qualified Data.Text.Read as T
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TLB
+import qualified Data.Text.Lazy.Encoding as TL
+import qualified Data.Foldable as F
 import qualified Prelude
 
 (~>) :: a -> (a -> b) -> b
@@ -116,87 +116,88 @@ infixl 9 ~>
 
 -- | Data for Hastache variable
 type MuContext m =
-    ByteString      -- ^ Variable name
+    Text            -- ^ Variable name
     -> m (MuType m) -- ^ Value
 
 class Show a => MuVar a where
     -- | Convert to Lazy ByteString
-    toLByteString   :: a -> LZ.ByteString 
+    toLText   :: a -> TL.Text
     -- | Is empty variable (empty string, zero number etc.)
-    isEmpty         :: a -> Bool 
+    isEmpty   :: a -> Bool 
     isEmpty _ = False
-        
-instance MuVar ByteString where
-    toLByteString = toLBS
+
+instance MuVar Text where
+    toLText = TL.fromStrict
     isEmpty a = length a == 0
+
+instance MuVar TL.Text where
+    toLText = id
+    isEmpty a = TL.length a == 0
+
+instance MuVar BS.ByteString where
+    toLText = TL.fromStrict . T.decodeUtf8
+    isEmpty a = BS.length a == 0
     
 instance MuVar LZ.ByteString where
-    toLByteString = id
+    toLText = TL.decodeUtf8
     isEmpty a = LZ.length a == 0
 
-withShowToLBS :: Show a => a -> LZ.ByteString
-withShowToLBS a = show a ~> encodeStr ~> toLBS
+withShowToText :: Show a => a -> TL.Text
+withShowToText a = show a ~> TL.pack
 
 numEmpty :: (Num a,AEq a) => a -> Bool
 numEmpty a = a ~== 0
 
-instance MuVar Integer where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Int     where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Float   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Double  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Int8    where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Int16   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Int32   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Int64   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Word    where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Word8   where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Word16  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Word32  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar Word64  where {toLByteString = withShowToLBS; isEmpty = numEmpty}
-instance MuVar ()      where {toLByteString = withShowToLBS}
+instance MuVar Integer where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Int     where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Float   where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Double  where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Int8    where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Int16   where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Int32   where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Int64   where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Word    where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Word8   where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Word16  where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Word32  where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar Word64  where {toLText = withShowToText; isEmpty = numEmpty}
+instance MuVar ()      where {toLText = withShowToText}
 
-instance MuVar Text.Text where 
-    toLByteString t = TextEncoding.encodeUtf8 t ~> toLBS
-    isEmpty a = Text.length a == 0
-
-instance MuVar LText.Text where 
-    toLByteString t = LTextEncoding.encodeUtf8 t
-    isEmpty a = LText.length a == 0
     
 instance MuVar Char where
-    toLByteString a = (a : "") ~> encodeStr ~> toLBS
+    toLText = TL.singleton
 
 instance MuVar a => MuVar [a] where
-    toLByteString a = toLByteString '[' <+> cnvLst <+> toLByteString ']'
+    toLText a = toLText '[' <+> cnvLst <+> toLText ']'
         where
-        cnvLst = map toLByteString a ~> 
-                LZ.intercalate (toLByteString ',')
-        (<+>) = LZ.append
+        cnvLst = map toLText a ~> 
+                TL.intercalate (toLText ',')
+        (<+>) = TL.append
 
 
 instance MuVar a => MuVar (Maybe a) where
-    toLByteString (Just a) = toLByteString a
-    toLByteString  Nothing  = ""
+    toLText (Just a) = toLText a
+    toLText Nothing  = ""
     isEmpty Nothing  = True
     isEmpty (Just a) = isEmpty a
 
 instance (MuVar a, MuVar b) => MuVar (Either a b) where
-    toLByteString (Left  a) = toLByteString a
-    toLByteString (Right b) = toLByteString b
+    toLText (Left  a) = toLText a
+    toLText (Right b) = toLText b
     isEmpty (Left  a) = isEmpty a
     isEmpty (Right b) = isEmpty b
     
 
 instance MuVar [Char] where
-    toLByteString k = k ~> encodeStr ~> toLBS
+    toLText = TL.pack
     isEmpty a = Prelude.length a == 0
 
 data MuType m = 
     forall a. MuVar a => MuVariable a                   |
     MuList [MuContext m]                                |
     MuBool Bool                                         |
-    forall a. MuVar a => MuLambda (ByteString -> a)     |
-    forall a. MuVar a => MuLambdaM (ByteString -> m a)  |
+    forall a. MuVar a => MuLambda (Text -> a)           |
+    forall a. MuVar a => MuLambdaM (Text -> m a)        |
     MuNothing
 
 instance Show (MuType m) where
@@ -208,57 +209,52 @@ instance Show (MuType m) where
     show MuNothing = "MuNothing"
 
 data MuConfig m = MuConfig {
-    muEscapeFunc        :: LZ.ByteString -> LZ.ByteString, 
+    muEscapeFunc        :: TL.Text -> TL.Text, 
         -- ^ Escape function ('htmlEscape', 'emptyEscape' etc.)
     muTemplateFileDir   :: Maybe FilePath,
         -- ^ Directory for search partial templates ({{> templateName}})
     muTemplateFileExt   :: Maybe String,
         -- ^ Partial template files extension
-    muTemplateRead      :: FilePath -> m (Maybe ByteString)
+    muTemplateRead      :: FilePath -> m (Maybe Text)
         -- ^ Template retrieval function. 'Nothing' indicates that the
         --   template could not be found.
     }
 
 -- | Convert String to UTF-8 Bytestring
-encodeStr :: String -> ByteString
-encodeStr = pack . SU.encode
+encodeStr :: String -> Text
+encodeStr = T.pack
 
 -- | Convert String to UTF-8 Lazy Bytestring
-encodeStrLBS :: String -> LZ.ByteString
-encodeStrLBS = LZ.pack . SU.encode
+encodeStrLT :: String -> TL.Text
+encodeStrLT = TL.pack
 
 -- | Convert UTF-8 Bytestring to String
-decodeStr :: ByteString -> String
-decodeStr = SU.decode . unpack
+decodeStr :: Text -> String
+decodeStr = T.unpack
 
 -- | Convert UTF-8 Lazy Bytestring to String
-decodeStrLBS :: LZ.ByteString -> String
-decodeStrLBS = SU.decode . LZ.unpack
+decodeStrLT :: TL.Text -> String
+decodeStrLT = TL.unpack
 
-ord8 :: Char -> Word8
-ord8 = fromIntegral . ord
-
+isMuNothing :: MuType t -> Bool
 isMuNothing MuNothing = True
 isMuNothing _ = False
 
 -- | Escape HTML symbols
-htmlEscape :: LZ.ByteString -> LZ.ByteString
-htmlEscape str = LZ.unpack str ~> proc ~> LZ.pack
+htmlEscape :: TL.Text -> TL.Text
+htmlEscape = TL.concatMap proc
     where
-    proc :: [Word8] -> [Word8]
-    proc (h:t)
-        | h == ord8 '&' = stp "&amp;" t
-        | h == ord8 '\\'= stp "&#92;" t
-        | h == ord8 '"' = stp "&quot;" t
-        | h == ord8 '\''= stp "&#39;" t
-        | h == ord8 '<' = stp "&lt;" t
-        | h == ord8 '>' = stp "&gt;" t
-        | otherwise     = h : proc t
-    proc [] = []
-    stp a t = map ord8 a ++ proc t
+    proc h
+        | h == '&' = "&amp;"
+        | h == '\\'= "&#92;"
+        | h == '"' = "&quot;"
+        | h == '\''= "&#39;"
+        | h == '<' = "&lt;"
+        | h == '>' = "&gt;"
+        | otherwise = TL.singleton h
 
 -- | No escape
-emptyEscape :: LZ.ByteString -> LZ.ByteString
+emptyEscape :: TL.Text -> TL.Text
 emptyEscape = id
 
 {- | Default config: HTML escape function, current directory as 
@@ -271,62 +267,65 @@ defaultConfig = MuConfig {
     muTemplateRead = liftIO . defaultTemplateRead
     }
 
-defaultTemplateRead :: FilePath -> IO (Maybe ByteString)
+defaultTemplateRead :: FilePath -> IO (Maybe Text)
 defaultTemplateRead fullFileName = do
     fe <- doesFileExist fullFileName
     if fe
         then Just <$> readFile fullFileName
         else return Nothing
 
-defOTag = "{{" :: ByteString
-defCTag = "}}" :: ByteString
-unquoteCTag = "}}}" :: ByteString
+defOTag = "{{" :: Text
+defCTag = "}}" :: Text
+unquoteCTag = "}}}" :: Text
 
 findBlock :: 
-       ByteString 
-    -> ByteString 
-    -> ByteString
-    -> Maybe (ByteString, Word8, ByteString, ByteString)
+       Text 
+    -> Text 
+    -> Text
+    -> Maybe (Text, Char, Text, Text)
 findBlock str otag ctag = do
     guard (length fnd > length otag)
     Just (pre, symb, inTag, afterClose)
     where
-    (pre, fnd) = breakSubstring otag str
+    (pre, fnd) = breakOn otag str
     symb = index fnd (length otag)
     (inTag, afterClose)
         -- test for unescape ( {{{some}}} )
-        | symb == ord8 '{' && ctag == defCTag = 
-            breakSubstring unquoteCTag fnd ~> \(a,b) -> 
+        | symb == '{' && ctag == defCTag = 
+            breakOn unquoteCTag fnd ~> \(a,b) -> 
             (drop (length otag) a, drop 3 b)
-        | otherwise = breakSubstring ctag fnd ~> \(a,b) -> 
+        | otherwise = breakOn ctag fnd ~> \(a,b) -> 
             (drop (length otag) a, drop (length ctag) b)
 
-toLBS :: ByteString -> LZ.ByteString
-toLBS v = LZ.fromChunks [v]
-
-readVar :: MonadIO m => [MuContext m] -> ByteString -> m LZ.ByteString
-readVar [] _ = return LZ.empty
+readVar :: MonadIO m => [MuContext m] -> Text -> m TL.Text
+readVar [] _ = return TL.empty
 readVar (context:parentCtx) name = do
     muType <- context name
     case muType of
-        MuVariable a -> return $ toLByteString a
-        MuBool a -> return $ show a ~> encodeStr ~> toLBS
+        MuVariable a -> return $ toLText a
+        MuBool a -> return $ show a ~> TL.pack
         MuNothing -> do
           mb <- runMaybeT $ tryFindArrayItem context name
           case mb of
             Just (nctx,nn) -> readVar [nctx] nn
             _ -> readVar parentCtx name
-        _ -> return LZ.empty
+        _ -> return TL.empty
+
+readInt :: Text -> Maybe (Int,Text)
+readInt t = eitherMaybe $ T.decimal t
+  where
+    eitherMaybe (Left _)  = Nothing
+    eitherMaybe (Right x) = Just x
 
 tryFindArrayItem :: MonadIO m => 
        MuContext m
-    -> ByteString
-    -> MaybeT m (MuContext m, ByteString)
+    -> Text
+    -> MaybeT m (MuContext m, Text)
 tryFindArrayItem context name = do
     guard $ length idx > 1
     (idx,nxt) <- MaybeT $ return $ readInt $ tail idx
     guard $ idx >= 0
-    guard $ (null nxt) || ((head nxt) == (ord8 '.'))
+    guard $ (null nxt) || (head nxt == '.')
     muType <- lift $ context nm
     case muType of
         MuList l -> do
@@ -337,87 +336,92 @@ tryFindArrayItem context name = do
                 else return (ncxt, tail nxt) -- {{some.0.field}}
         _ -> mzero
     where
-    (nm,idx) = breakSubstring dotStr name
+    (nm,idx) = breakOn dotStr name
     dotStr = "."
 
 findCloseSection :: 
-       ByteString 
-    -> ByteString 
-    -> ByteString 
-    -> ByteString
-    -> Maybe (ByteString, ByteString)
+       Text 
+    -> Text 
+    -> Text 
+    -> Text
+    -> Maybe (Text, Text)
 findCloseSection str name otag ctag = do
     guard (length after > 0)
     Just (before, drop (length close) after)
     where
     close = foldl1 append [otag, "/", name, ctag]
-    (before, after) = breakSubstring close str
+    (before, after) = breakOn close str
 
-trimCharsTest :: Word8 -> Bool
-trimCharsTest = (`elem` " \t")
+trimCharsTest :: Char -> Bool
+trimCharsTest = (`Prelude.elem` " \t")
 
-trimAll :: ByteString -> ByteString
-trimAll str = span trimCharsTest str ~> snd ~> spanEnd trimCharsTest ~> fst
+trimAll :: Text -> Text
+trimAll = dropAround trimCharsTest
 
-addRes :: MonadIO m => LZ.ByteString -> ReaderT (IORef BSB.Builder) m ()
+addRes :: MonadIO m => (Either T.Text TL.Text) -> ReaderT (IORef TLB.Builder) m ()
 addRes str = do
     rf <- ask
     b <- readIORef rf ~> liftIO
-    let l = mappend b (BSB.fromLazyByteString str)
+    let l = mappend b t
     writeIORef rf l ~> liftIO
     return ()
+  where
+    t = either TLB.fromText TLB.fromLazyText str
 
-addResBS :: MonadIO m => ByteString -> ReaderT (IORef BSB.Builder) m ()
-addResBS str = toLBS str ~> addRes
+addResT :: MonadIO m => T.Text -> ReaderT (IORef TLB.Builder) m ()
+addResT = addRes . Left
 
-addResLZ :: MonadIO m => LZ.ByteString -> ReaderT (IORef BSB.Builder) m ()
-addResLZ = addRes
+addResTL :: MonadIO m => TL.Text -> ReaderT (IORef TLB.Builder) m ()
+addResTL = addRes . Right
 
 processBlock :: MonadIO m => 
-       ByteString 
+       Text 
     -> [MuContext m] 
-    -> ByteString 
-    -> ByteString 
+    -> Text 
+    -> Text 
     -> MuConfig m
-    -> ReaderT (IORef BSB.Builder) m ()
+    -> ReaderT (IORef TLB.Builder) m ()
 processBlock str contexts otag ctag conf = 
     case findBlock str otag ctag of
         Just (pre, symb, inTag, afterClose) -> do
-            addResBS pre
+            addResT pre
             renderBlock contexts symb inTag afterClose otag ctag conf
         Nothing -> do
-            addResBS str
+            addResT str
             return ()
+
+elem :: Char -> Text -> Bool
+elem c = isJust . find (==c)
 
 renderBlock :: MonadIO m =>
        [MuContext m] 
-    -> Word8 
-    -> ByteString 
-    -> ByteString 
-    -> ByteString
-    -> ByteString 
+    -> Char 
+    -> Text 
+    -> Text 
+    -> Text
+    -> Text 
     -> MuConfig m
-    -> ReaderT (IORef BSB.Builder) m ()
+    -> ReaderT (IORef TLB.Builder) m ()
 renderBlock contexts symb inTag afterClose otag ctag conf
     -- comment
-    | symb == ord8 '!' = next afterClose
+    | symb == '!' = next afterClose
     -- unescape variable
-    | symb == ord8 '&' || (symb == ord8 '{' && otag == defOTag) = do
-        addResLZ =<< lift (readVar contexts (tail inTag ~> trimAll))
+    | symb == '&' || (symb == '{' && otag == defOTag) = do
+        addResTL =<< lift (readVar contexts (tail inTag ~> trimAll))
         next afterClose
     -- section, inverted section
-    | symb == ord8 '#' || symb == ord8 '^' = 
+    | symb == '#' || symb == '^' = 
         case findCloseSection afterClose (tail inTag) otag ctag of
             Nothing -> next afterClose
             Just (sectionContent', afterSection') -> 
                 let 
                     dropNL str = 
-                        if length str > 0 && head str == ord8 '\n' 
+                        if length str > 0 && head str == '\n' 
                            then tail str
                            else str
                     sectionContent = dropNL sectionContent'
                     afterSection = 
-                        if ord8 '\n' `elem` sectionContent
+                        if '\n' `elem` sectionContent
                             then dropNL afterSection'
                             else afterSection'
                     tlInTag = tail inTag
@@ -433,7 +437,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                         next afterSection
                 in do
                 mbCtx <- lift $ runMaybeT readContext
-                if symb == ord8 '#'
+                if symb == '#'
                     then
                       case mbCtx of -- section
                         Just (MuList []) -> next afterSection
@@ -446,11 +450,11 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                             else processAndNext
                         Just (MuBool True) -> processAndNext
                         Just (MuLambda func) -> do
-                            func sectionContent ~> toLByteString ~> addResLZ
+                            func sectionContent ~> toLText ~> addResTL
                             next afterSection
                         Just (MuLambdaM func) -> do
                             res <- lift (func sectionContent)
-                            toLByteString res ~> addResLZ
+                            res ~> toLText ~> addResTL
                             next afterSection
                         _ -> next afterSection
                     else case mbCtx of -- inverted section
@@ -462,14 +466,14 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                         Nothing -> processAndNext
                         _ -> next afterSection
     -- set delimiter
-    | symb == ord8 '=' = 
+    | symb == '=' = 
         let
             lenInTag = length inTag
             delimitersCommand = take (lenInTag - 1) inTag ~> drop 1
             getDelimiter = do
                 guard $ lenInTag > 4
-                guard $ index inTag (lenInTag - 1) == ord8 '='
-                [newOTag,newCTag] <- Just $ split (ord8 ' ') delimitersCommand
+                guard $ index inTag (lenInTag - 1) == '='
+                [newOTag,newCTag] <- Just $ splitOn (singleton ' ') delimitersCommand
                 Just (newOTag, newCTag)
         in case getDelimiter of
                 Nothing -> next afterClose
@@ -477,7 +481,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
                     processBlock (trim' afterClose) contexts
                         newOTag newCTag conf
     -- partials
-    | symb == ord8 '>' =
+    | symb == '>' =
         let 
             fileName' = tail inTag ~> trimAll
             fileName'' = case muTemplateFileExt conf of
@@ -492,41 +496,40 @@ renderBlock contexts symb inTag afterClose otag ctag conf
             next (trim' afterClose)
     -- variable
     | otherwise = do
-        addResLZ . muEscapeFunc conf =<<
+        addResTL . muEscapeFunc conf =<<
           lift (readVar contexts $ trimAll inTag)
         next afterClose
     where
     next t = processBlock t contexts otag ctag conf
     trim' content = 
         dropWhile trimCharsTest content
-        ~> \t -> if length t > 0 && head t == ord8 '\n'
+        ~> \t -> if length t > 0 && head t == '\n'
             then tail t else content
-    processSection = undefined
 
 -- | Render Hastache template from ByteString
 hastacheStr :: (MonadIO m) => 
        MuConfig m       -- ^ Configuration
-    -> ByteString       -- ^ Template
+    -> Text             -- ^ Template
     -> MuContext m      -- ^ Context
-    -> m LZ.ByteString
+    -> m TL.Text
 hastacheStr conf str context = 
-    hastacheStrBuilder conf str context >>= return . BSB.toLazyByteString
+    hastacheStrBuilder conf str context >>= return . TLB.toLazyText
 
 -- | Render Hastache template from file
 hastacheFile :: (MonadIO m) => 
        MuConfig m       -- ^ Configuration
     -> FilePath         -- ^ Template file name
     -> MuContext m      -- ^ Context
-    -> m LZ.ByteString
+    -> m TL.Text
 hastacheFile conf file_name context = 
-    hastacheFileBuilder conf file_name context >>= return . BSB.toLazyByteString
+    hastacheFileBuilder conf file_name context >>= return . TLB.toLazyText
 
 -- | Render Hastache template from ByteString
 hastacheStrBuilder :: (MonadIO m) => 
        MuConfig m       -- ^ Configuration
-    -> ByteString       -- ^ Template
+    -> Text             -- ^ Template
     -> MuContext m      -- ^ Context
-    -> m BSB.Builder
+    -> m TLB.Builder
 hastacheStrBuilder conf str context = do
     rf <- newIORef mempty ~> liftIO
     runReaderT (processBlock str [context] defOTag defCTag conf) rf
@@ -537,7 +540,7 @@ hastacheFileBuilder :: (MonadIO m) =>
        MuConfig m       -- ^ Configuration
     -> FilePath         -- ^ Template file name
     -> MuContext m      -- ^ Context
-    -> m BSB.Builder
+    -> m TLB.Builder
 hastacheFileBuilder conf file_name context = do
     str <- readFile file_name ~> liftIO
     hastacheStrBuilder conf str context

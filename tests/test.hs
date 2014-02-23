@@ -15,13 +15,14 @@ import Text.Hastache.Context
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LZ
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 
 resCorrectness = "result correctness"
 
 -- Hastache comments
 commentsTest = do
     res <- hastacheStr defaultConfig (encodeStr template) undefined
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \hello {{! comment #1}} world! \n\
@@ -38,7 +39,7 @@ commentsTest = do
 variablesTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkStrContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \   Char:               [ {{Char}} ]            \n\
@@ -75,7 +76,7 @@ variablesTest = do
 showHideSectionsTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkStrContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \no context : {{^noCtx}}Should render{{/noCtx}}\n\
@@ -129,7 +130,7 @@ showHideSectionsTest = do
 listSectionTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkStrContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \text 1\n\
@@ -155,7 +156,7 @@ listSectionTest = do
 boolSectionTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkStrContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \text 1\n\
@@ -188,14 +189,14 @@ boolSectionTest = do
 lambdaSectionTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkStrContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \text 1\n\
         \{{#function}}Hello{{/function}}\n\
         \text 2\n\
         \"
-    context "function" = MuLambda BS.reverse
+    context "function" = MuLambda T.reverse
 
     testRes = "\
         \text 1\n\
@@ -206,7 +207,7 @@ lambdaSectionTest = do
 -- Transform section with monadic function
 lambdaMSectionTest = do
     (res, writerState) <- runWriterT monadicFunction
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     assertEqualStr "monad state correctness" (decodeStr writerState)
         testMonad
     where
@@ -218,7 +219,7 @@ lambdaMSectionTest = do
         \"
     context "mf" = MuLambdaM $ \i -> do
         tell i
-        return $ BS.reverse i
+        return $ T.reverse i
     testRes = "\
         \[cba]\n\
         \[fed]\n\
@@ -231,7 +232,7 @@ monadicContextTest = do
         (mkStrContextM context)
     let { res = case r of
         Left err  -> "error: " ++ err
-        Right res -> decodeStrLBS res }
+        Right res -> decodeStrLT res }
     assertEqualStr resCorrectness res testRes
     where
     template = "Hello, {{name}}! You have {{unread}} unread messages. {{some}}"
@@ -244,7 +245,7 @@ monadicContextTest = do
 setDelimiterTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkStrContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \text 1\n\
@@ -269,7 +270,7 @@ setDelimiterTest = do
 partialsTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkStrContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \text 1\n\
@@ -306,7 +307,7 @@ data SomeData = SomeData {
 genericContextTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkGenericContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \text 1\n\
@@ -368,7 +369,7 @@ genericContextTest = do
 nestedContextTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkStrContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \{{top}}\n\
@@ -403,7 +404,7 @@ data NestedData = NestedData {
 
 nestedGenericContextTest = do
     res <- hastacheStr defaultConfig (encodeStr template) context
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \Top variable : {{topDataTop}}\n\
@@ -433,7 +434,7 @@ nestedGenericContextTest = do
 arrayItemsTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkStrContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \{{section.0.name}} {{section.1.name}} {{section.2.name}}\n\
@@ -464,7 +465,7 @@ data ArrayItemTest_Container = ArrayItemTest_Container {
 
 arrayItemsTestGeneric = do
     res <- hastacheStr defaultConfig (encodeStr template) context
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     template = "\
         \{{items.0.name}} {{items.2.name}}\n\
@@ -491,7 +492,7 @@ data Heroes = Heroes { heroes :: [Hero] }
 multipleConstrTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
         (mkGenericContext context)
-    assertEqualStr resCorrectness (decodeStrLBS res) testRes
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
     where
     context  = Heroes [Good 4, Evil 2]
     template = "\

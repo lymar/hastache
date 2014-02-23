@@ -1,9 +1,10 @@
 #!/usr/local/bin/runhaskell
 {-# LANGUAGE DeriveDataTypeable #-}
 import Text.Hastache 
-import Text.Hastache.Context 
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as LZ 
+import Text.Hastache.Context
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.IO as TL
 import Data.Data 
 import Data.Generics 
 import Data.Char
@@ -20,9 +21,9 @@ data Example = Example {
     simpleListField         :: [String],
     dataListField           :: [InternalData],
     stringFunc              :: String -> String,
-    byteStringFunc          :: B.ByteString -> B.ByteString,
+    textFunc                :: T.Text -> T.Text,
     monadicStringFunc       :: String -> IO String,
-    monadicByteStringFunc   :: B.ByteString -> IO B.ByteString
+    monadicTextFunc         :: T.Text -> IO T.Text
     } deriving (Data, Typeable)
 
 example = hastacheStr defaultConfig (encodeStr template) 
@@ -39,15 +40,15 @@ example = hastacheStr defaultConfig (encodeStr template)
         " * {{someField}}, {{anotherField}}. top level var: {{intField}}",
         "{{/dataListField}}",
         "{{#stringFunc}}upper{{/stringFunc}}",
-        "{{#byteStringFunc}}reverse{{/byteStringFunc}}",
+        "{{#textFunc}}reverse{{/textFunc}}",
         "{{#monadicStringFunc}}upper (monadic){{/monadicStringFunc}}",
-        "{{#monadicByteStringFunc}}reverse (monadic){{/monadicByteStringFunc}}"]
+        "{{#monadicTextFunc}}reverse (monadic){{/monadicTextFunc}}"]
     context = Example { stringField = "string value", intField = 1, 
         dataField = InternalData "val" 123, simpleListField = ["a","b","c"],
         dataListField = [InternalData "aaa" 1, InternalData "bbb" 2],
         stringFunc = map toUpper,
-        byteStringFunc = B.reverse,
+        textFunc = T.reverse,
         monadicStringFunc = return . map toUpper,
-        monadicByteStringFunc = return . B.reverse }
+        monadicTextFunc = return . T.reverse }
 
-main = example >>= LZ.putStrLn
+main = example >>= TL.putStrLn

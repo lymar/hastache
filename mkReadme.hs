@@ -1,7 +1,8 @@
 #!/usr/local/bin/runhaskell
 import Text.Hastache 
-import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy as LZ 
+import Text.Hastache.Context
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.IO as TL
 import System.Process (readProcess)
 import System.Directory (setCurrentDirectory, getCurrentDirectory)
 import System.FilePath ((</>))
@@ -11,7 +12,7 @@ import Data.Char (isSpace)
 main = do 
     res <- hastacheFile defaultConfig "README.md.ha"
         (mkStrContext context)
-    LZ.writeFile "README.md" res 
+    TL.writeFile "README.md" res 
     where 
     context "example" = MuLambdaM $ \fn -> do
         cd <- setExampleDir

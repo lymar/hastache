@@ -2,12 +2,12 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy as LZ 
+import qualified Data.ByteString.Lazy as TL 
 import Data.Data 
 import Data.Generics 
 
 main = hastacheStr defaultConfig (encodeStr template) context
-    >>= LZ.putStrLn
+    >>= TL.putStrLn
 
 -- begin example
 data Hero = Hero { name :: String } deriving (Data, Typeable)

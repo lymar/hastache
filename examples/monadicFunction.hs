@@ -2,15 +2,16 @@
 -- begin example
 {-# LANGUAGE FlexibleContexts #-}
 import Text.Hastache 
-import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy.Char8 as LZ 
+import Text.Hastache.Context
+import qualified Data.Text.Lazy as TL 
+import qualified Data.Text.Lazy.IO as TL 
 import Control.Monad.State 
 
-main = run >>= LZ.putStrLn
+main = run >>= TL.putStrLn
 
 run = evalStateT stateFunc ""
 
-stateFunc :: StateT String IO LZ.ByteString
+stateFunc :: StateT String IO TL.Text
 stateFunc = 
     hastacheStr defaultConfig (encodeStr template) (mkStrContext context) 
 
