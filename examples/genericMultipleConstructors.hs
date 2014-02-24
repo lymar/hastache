@@ -36,7 +36,7 @@ template = mconcat [
     " * Minion: {{minion}}\n",
     "{{/EvilHero}}"]
 
-render :: Hero -> IO TL.ByteString
+render :: Hero -> IO TL.Text
 render = hastacheStr defaultConfig (encodeStr template)
        . mkGenericContext
 

@@ -43,7 +43,7 @@ With Generics
 {-# LANGUAGE DeriveDataTypeable #-}
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy as TL 
+import qualified Data.Text.Lazy.IO as TL 
 import Data.Data 
 import Data.Generics 
 

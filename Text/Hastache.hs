@@ -128,7 +128,7 @@ class Show a => MuVar a where
 
 instance MuVar Text where
     toLText = TL.fromStrict
-    isEmpty a = length a == 0
+    isEmpty = T.null
 
 instance MuVar TL.Text where
     toLText = id
@@ -243,15 +243,14 @@ isMuNothing _ = False
 -- | Escape HTML symbols
 htmlEscape :: TL.Text -> TL.Text
 htmlEscape = TL.concatMap proc
-    where
-    proc h
-        | h == '&' = "&amp;"
-        | h == '\\'= "&#92;"
-        | h == '"' = "&quot;"
-        | h == '\''= "&#39;"
-        | h == '<' = "&lt;"
-        | h == '>' = "&gt;"
-        | otherwise = TL.singleton h
+  where
+    proc '&'  = "&amp;"
+    proc '\\' = "&#92;"
+    proc '"'  = "&quot;"
+    proc '\'' = "&#39;"
+    proc '<'  = "&lt;"
+    proc '>'  = "&gt;"
+    proc h    = TL.singleton h
 
 -- | No escape
 emptyEscape :: TL.Text -> TL.Text
@@ -303,7 +302,7 @@ readVar (context:parentCtx) name = do
     muType <- context name
     case muType of
         MuVariable a -> return $ toLText a
-        MuBool a -> return $ show a ~> TL.pack
+        MuBool a -> return . withShowToText $ a
         MuNothing -> do
           mb <- runMaybeT $ tryFindArrayItem context name
           case mb of
