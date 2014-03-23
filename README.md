@@ -20,10 +20,10 @@ See [Hastache hackage page](http://hackage.haskell.org/package/hastache).
 ```haskell
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy.Char8 as LZ 
+import qualified Data.Text.Lazy.IO as TL
 
 main = hastacheStr defaultConfig (encodeStr template) (mkStrContext context)
-    >>= LZ.putStrLn
+    >>= TL.putStrLn
 
 template = "Hello, {{name}}!\n\nYou have {{unread}} unread messages." 
 
@@ -43,12 +43,12 @@ With Generics
 {-# LANGUAGE DeriveDataTypeable #-}
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy as LZ 
+import qualified Data.Text.Lazy.IO as TL 
 import Data.Data 
 import Data.Generics 
 
 main = hastacheStr defaultConfig (encodeStr template) context
-    >>= LZ.putStrLn
+    >>= TL.putStrLn
 
 data Info = Info { 
     name    :: String, 
@@ -114,7 +114,7 @@ List item by index
 
 ```haskell
 main = mapM_ (\(template,context) ->
-    hastacheStr defaultConfig (encodeStr template) context >>= LZ.putStrLn) 
+    hastacheStr defaultConfig (encodeStr template) context >>= TL.putStrLn) 
         [(template1, mkStrContext context1),
          (template1, context2),
          (template3, context3)]
@@ -185,7 +185,7 @@ Number
 ```haskell
 main = mapM_ (\ctx ->
     hastacheStr defaultConfig (encodeStr template) (mkStrContext ctx)
-    >>= LZ.putStrLn) [context1,context2]
+    >>= TL.putStrLn) [context1,context2]
 
 template = "{{#msg}}{{msg}}{{/msg}}{{^msg}}No{{/msg}} new messages."
 
@@ -214,15 +214,16 @@ Hello, dlrow!
 ```haskell
 {-# LANGUAGE FlexibleContexts #-}
 import Text.Hastache 
-import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy.Char8 as LZ 
+import Text.Hastache.Context
+import qualified Data.Text.Lazy as TL 
+import qualified Data.Text.Lazy.IO as TL 
 import Control.Monad.State 
 
-main = run >>= LZ.putStrLn
+main = run >>= TL.putStrLn
 
 run = evalStateT stateFunc ""
 
-stateFunc :: StateT String IO LZ.ByteString
+stateFunc :: StateT String IO TL.Text
 stateFunc = 
     hastacheStr defaultConfig (encodeStr template) (mkStrContext context) 
 
@@ -297,4 +298,3 @@ Bibliography:
 
  * [Hastache test](https://github.com/lymar/hastache/blob/master/tests/test.hs)
  * Real world example: [README.md file generator](https://github.com/lymar/hastache/blob/master/mkReadme.hs)
- * [examples/ directory](https://github.com/lymar/hastache/tree/master/examples)

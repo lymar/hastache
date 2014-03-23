@@ -2,11 +2,11 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy.Char8 as LZ 
+import qualified Data.Text.Lazy.IO as TL 
 import Data.Data 
 import Data.Generics 
 
-main = hastacheStr defaultConfig (encodeStr template) context >>= LZ.putStrLn
+main = hastacheStr defaultConfig (encodeStr template) context >>= TL.putStrLn
 
 -- begin example
 data Book = Book { 

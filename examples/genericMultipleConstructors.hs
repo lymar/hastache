@@ -7,7 +7,7 @@ import           Data.Data
 import           Data.Monoid
 import           Data.Typeable                 ()
 
-import qualified Data.ByteString.Lazy.Char8 as LZ
+import qualified Data.Text.Lazy.IO as TL
 import           Text.Hastache
 import           Text.Hastache.Context
 
@@ -36,7 +36,7 @@ template = mconcat [
     " * Minion: {{minion}}\n",
     "{{/EvilHero}}"]
 
-render :: Hero -> IO LZ.ByteString
+render :: Hero -> IO TL.Text
 render = hastacheStr defaultConfig (encodeStr template)
        . mkGenericContext
 
@@ -46,9 +46,9 @@ main = do let batman = SuperHero "Batman" ["ht","ht"] "Robin"
           putStrLn "\n------ batman"
           print batman
           putStrLn "--------------------------"
-          render batman     >>= LZ.putStrLn
+          render batman     >>= TL.putStrLn
 
           putStrLn "\n------ doctorEvil"
           print doctorEvil
           putStrLn "--------------------------"
-          render doctorEvil >>= LZ.putStrLn
+          render doctorEvil >>= TL.putStrLn
