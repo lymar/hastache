@@ -18,12 +18,12 @@ Simplest example:
 @
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy.Char8 as LZ 
+import qualified Data.Text.Lazy.IO as TL
 
 main = do 
     res <- hastacheStr defaultConfig (encodeStr template)  
         (mkStrContext context) 
-    LZ.putStrLn res 
+    TL.putStrLn res 
   where 
     template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\" 
     context \"name\" = MuVariable \"Haskell\"
@@ -43,7 +43,7 @@ Using Generics:
 @
 import Text.Hastache 
 import Text.Hastache.Context 
-import qualified Data.ByteString.Lazy.Char8 as LZ 
+import qualified Data.Text.Lazy.IO as TL
 import Data.Data 
 import Data.Generics 
  
@@ -55,7 +55,7 @@ data Info = Info {
 main = do 
     res <- hastacheStr defaultConfig (encodeStr template) 
         (mkGenericContext inf) 
-    LZ.putStrLn res 
+    TL.putStrLn res 
   where 
     template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\"
     inf = Info \"Haskell\" 100
@@ -505,7 +505,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
         ~> \t -> if length t > 0 && head t == '\n'
             then tail t else content
 
--- | Render Hastache template from ByteString
+-- | Render Hastache template from 'Text'
 hastacheStr :: (MonadIO m) => 
        MuConfig m       -- ^ Configuration
     -> Text             -- ^ Template
@@ -523,7 +523,7 @@ hastacheFile :: (MonadIO m) =>
 hastacheFile conf file_name context = 
     hastacheFileBuilder conf file_name context >>= return . TLB.toLazyText
 
--- | Render Hastache template from ByteString
+-- | Render Hastache template from 'Text'
 hastacheStrBuilder :: (MonadIO m) => 
        MuConfig m       -- ^ Configuration
     -> Text             -- ^ Template
