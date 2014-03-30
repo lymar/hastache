@@ -1,0 +1,5 @@
+# 0.6.0
+
+- Switching from lazy ByteString to lazy Text
+- Support for multiple constructors in generic contexts (issue #16)
+- Additional `MuVar` instances (`Maybe`, `Either`, `()`)

@@ -5,7 +5,7 @@ license-file:    LICENSE
 category:        Text
 copyright:       Sergey S Lymar (c) 2011-2013
 author:          Sergey S Lymar <sergey.lymar@gmail.com>
-maintainer:      Daniil Frumin <dan @covariant.me>
+maintainer:      Daniil Frumin <dan at covariant.me>
 stability:       experimental
 synopsis:        Haskell implementation of Mustache templates
 cabal-version:   >= 1.8
