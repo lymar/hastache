@@ -220,19 +220,19 @@ data MuConfig m = MuConfig {
         --   template could not be found.
     }
 
--- | Convert String to UTF-8 Bytestring
+-- | Convert String to Text
 encodeStr :: String -> Text
 encodeStr = T.pack
 
--- | Convert String to UTF-8 Lazy Bytestring
+-- | Convert String to Lazy Text
 encodeStrLT :: String -> TL.Text
 encodeStrLT = TL.pack
 
--- | Convert UTF-8 Bytestring to String
+-- | Convert Text to String
 decodeStr :: Text -> String
 decodeStr = T.unpack
 
--- | Convert UTF-8 Lazy Bytestring to String
+-- | Convert Lazy Text to String
 decodeStrLT :: TL.Text -> String
 decodeStrLT = TL.unpack
 
