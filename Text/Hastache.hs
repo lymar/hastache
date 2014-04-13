@@ -16,8 +16,8 @@ See homepage for examples of usage: <http://github.com/lymar/hastache>
 Simplest example:
 
 @
-import Text.Hastache 
-import Text.Hastache.Context 
+import           Text.Hastache
+import           Text.Hastache.Context
 import qualified Data.Text.Lazy.IO as TL
 
 main = do 
@@ -41,22 +41,23 @@ You have 100 unread messages.
 Using Generics:
 
 @
-import Text.Hastache 
-import Text.Hastache.Context 
+{&#45;\# LANGUAGE DeriveDataTypeable, OverloadedStrings \#&#45;}
+
+import           Text.Hastache
+import           Text.Hastache.Context
 import qualified Data.Text.Lazy.IO as TL
-import Data.Data 
-import Data.Generics 
- 
-data Info = Info { 
-    name    :: String, 
-    unread  :: Int 
+import           Data.Data
+
+data Info = Info {
+    name    :: String,
+    unread  :: Int
     } deriving (Data, Typeable)
 
-main = do 
-    res <- hastacheStr defaultConfig (encodeStr template) 
-        (mkGenericContext inf) 
-    TL.putStrLn res 
-  where 
+main = do
+    res <- hastacheStr defaultConfig template
+        (mkGenericContext inf)
+    TL.putStrLn res
+  where
     template = \"Hello, {{name}}!\\n\\nYou have {{unread}} unread messages.\"
     inf = Info \"Haskell\" 100
 @
