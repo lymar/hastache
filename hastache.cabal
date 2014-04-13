@@ -36,7 +36,6 @@ library
     ,transformers
     ,directory
     ,filepath
-    ,utf8-string
     ,text
     ,containers
     ,syb
