@@ -14,6 +14,7 @@ module Text.Hastache.Context (
       mkStrContext
     , mkStrContextM
     , mkGenericContext
+    , mkGenericContext'
     ) where 
 
 import Data.Data
@@ -205,7 +206,16 @@ mkGenericContext :: (Monad m, Data a, Typeable m) => a -> MuContext m
 #else
 mkGenericContext :: (Monad m, Data a, Typeable1 m) => a -> MuContext m
 #endif
-mkGenericContext val = toGenTemp val ~> convertGenTempToContext
+mkGenericContext val = toGenTemp id val ~> convertGenTempToContext
+
+-- | Like 'mkGenericContext', but apply the given function to record field names
+-- when constructing the context.
+#if MIN_VERSION_base(4,7,0)
+mkGenericContext' :: (Monad m, Data a, Typeable m) => (String -> String) -> a -> MuContext m
+#else
+mkGenericContext' :: (Monad m, Data a, Typeable1 m) => (String -> String) -> a -> MuContext m
+#endif
+mkGenericContext' f val = toGenTemp f val ~> convertGenTempToContext
     
 data TD m = 
       TSimple (MuType m) 
@@ -215,21 +225,21 @@ data TD m =
     deriving (Show)
 
 #if MIN_VERSION_base(4,7,0)
-toGenTemp :: (Data a, Monad m, Typeable m) => a -> TD m
+toGenTemp :: (Data a, Monad m, Typeable m) => (String -> String) -> a -> TD m
 #else
-toGenTemp :: (Data a, Monad m, Typeable1 m) => a -> TD m
+toGenTemp :: (Data a, Monad m, Typeable1 m) => (String -> String) -> a -> TD m
 #endif
-toGenTemp a = TObj $ conName : zip fields (gmapQ procField a)
+toGenTemp f a = TObj $ conName : zip fields (gmapQ (procField f) a)
     where
-    fields = toConstr a ~> constrFields
+    fields = toConstr a ~> constrFields ~> map f
     conName = (toConstr a ~> showConstr, MuBool True ~> TSimple)
 
 #if MIN_VERSION_base(4,7,0)
-procField :: (Data a, Monad m, Typeable m) => a -> TD m
+procField :: (Data a, Monad m, Typeable m) => (String -> String) -> a -> TD m
 #else
-procField :: (Data a, Monad m, Typeable1 m) => a -> TD m
+procField :: (Data a, Monad m, Typeable1 m) => (String -> String) -> a -> TD m
 #endif
-procField = 
+procField f =
     obj
     `ext1Q` list
     `extQ` (\(i::String)            -> MuVariable (encodeStr i) ~> TSimple)
@@ -268,9 +278,9 @@ procField =
     `extQ` muLambdaMBSLBS
     where
     obj a = case dataTypeRep (dataTypeOf a) of
-        AlgRep (_:_) -> toGenTemp a
+        AlgRep (_:_) -> toGenTemp f a
         _ -> TUnknown
-    list a = map procField a ~> TList
+    list a = map (procField f) a ~> TList
 
     muLambdaTT :: (T.Text -> T.Text) -> TD m
     muLambdaTT f = MuLambda f ~> TSimple
