@@ -143,7 +143,7 @@ data Example = Example {
 example = hastacheStr defaultConfig (encodeStr template) 
     (mkGenericContext context)
     where
-    template = concat $ map (++ \"\\n\") [
+    template = unlines [
         \"string: {{stringField}}\",
         \"int: {{intField}}\",
         \"data: {{dataField.someField}}, {{dataField.anotherField}}\",
