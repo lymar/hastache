@@ -90,7 +90,7 @@ import Data.Functor ((<$>))
 import Data.Int
 import Data.IORef
 import Data.Maybe (isJust)
-import Data.Monoid (mappend, mempty)
+import Data.Monoid (Monoid, mappend, mempty)
 import Data.Text hiding (map, foldl1)
 import Data.Text.IO
 import Data.Word
@@ -119,6 +119,22 @@ infixl 9 ~>
 type MuContext m =
     Text            -- ^ Variable name
     -> m (MuType m) -- ^ Value
+
+instance (Monad m) => Monoid (MuContext m) where
+    mempty = const $ return MuNothing
+    a `mappend` b = \v -> do
+        x <- a v
+        case x of
+            MuNothing -> b v
+            _ -> return x
+
+-- | Left-leaning compoistion of contexts. Given contexts @c1@ and
+-- @c2@, the behaviour of @(c1 <> c2) x@ is following: if @c1 x@
+-- produces 'MuNothing', then the result is @c2 x@. Otherwise the
+-- result is @c1 x@. Even if @c1 x@ is 'MuNothing', the monadic
+-- effects of @c1@ are still to take place.
+composeCtx :: (Monad m) => MuContext m -> MuContext m -> MuContext m
+composeCtx = mappend
 
 class Show a => MuVar a where
     -- | Convert to Lazy 'Text'
