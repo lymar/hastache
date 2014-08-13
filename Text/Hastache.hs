@@ -131,7 +131,7 @@ instance (Monad m) => Monoid (MuContext m) where
 -- @c2@, the behaviour of @(c1 <> c2) x@ is following: if @c1 x@
 -- produces 'MuNothing', then the result is @c2 x@. Otherwise the
 -- result is @c1 x@. Even if @c1 x@ is 'MuNothing', the monadic
--- effects of @c1@ are still taking place.
+-- effects of @c1@ are still to take place.
 composeCtx :: (Monad m) => MuContext m -> MuContext m -> MuContext m
 composeCtx = mappend
 
