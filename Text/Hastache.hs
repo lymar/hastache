@@ -72,6 +72,7 @@ module Text.Hastache (
     , MuType(..)
     , MuConfig(..)
     , MuVar(..)
+    , composeCtx
     , htmlEscape
     , emptyEscape
     , defaultConfig

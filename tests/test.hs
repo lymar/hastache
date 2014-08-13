@@ -503,6 +503,26 @@ multipleConstrTest = do
         \"
     testRes = "42"
 
+-- Context composition
+compositionTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) $
+        mkGenericContext context 
+        `composeCtx` mempty
+        `composeCtx` mkStrContext context2
+
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
+    where
+    context  = Heroes [Good 4, Evil 2]
+    context2 "Ugly" = MuVariable (3::Int)
+    context2 _      = MuNothing
+    template = "\
+        \{{#heroes}}\
+        \{{#Good}}{{goodness}}{{/Good}}\
+        \{{#Evil}}{{evilness}}{{/Evil}}\
+        \{{#Ugly}}{{Ugly}}{{/Ugly}}\
+        \{{/heroes}}\
+        \"
+    testRes = "4323"
 
 tests = TestList [
       TestLabel "Comments test" (TestCase commentsTest)
@@ -517,13 +537,14 @@ tests = TestList [
     , TestLabel "Partials test" (TestCase partialsTest)
     , TestLabel "Generic context test" (TestCase genericContextTest)
     , TestLabel "Multiple constructors in a generic context"
-        (TestCase multipleConstrTest)
+        (TestCase multipleConstrTest)    
     , TestLabel "Nested context test" (TestCase nestedContextTest)
     , TestLabel "Nested generic context test"
                                         (TestCase nestedGenericContextTest)
     , TestLabel "Accessing array item by index" (TestCase arrayItemsTest)
     , TestLabel "Accessing array item by index (generic version)"
         (TestCase arrayItemsTestGeneric)
+    , TestLabel "Composing contexts" (TestCase compositionTest)
     ]
 
 main = do
