@@ -138,7 +138,7 @@ composeCtx :: (Monad m) => MuContext m -> MuContext m -> MuContext m
 composeCtx = mappend
 
 class Show a => MuVar a where
-    -- | Convert to Lazy 'Text'
+    -- | Convert to lazy 'Data.Text.Lazy.Text'
     toLText   :: a -> TL.Text
     -- | Is empty variable (empty string, zero number etc.)
     isEmpty   :: a -> Bool 
@@ -230,7 +230,7 @@ data MuConfig m = MuConfig {
     muEscapeFunc        :: TL.Text -> TL.Text, 
         -- ^ Escape function ('htmlEscape', 'emptyEscape' etc.)
     muTemplateFileDir   :: Maybe FilePath,
-        -- ^ Directory for search partial templates ({{> templateName}})
+        -- ^ Directory for search partial templates (@{{> templateName}}@)
     muTemplateFileExt   :: Maybe String,
         -- ^ Partial template files extension
     muTemplateRead      :: FilePath -> m (Maybe Text)
@@ -238,22 +238,23 @@ data MuConfig m = MuConfig {
         --   template could not be found.
     }
 
--- | Convert String to Text
+-- | Convert 'String' to 'Text'
 encodeStr :: String -> Text
 encodeStr = T.pack
 
--- | Convert String to Lazy Text
+-- | Convert 'String' to Lazy 'Data.Text.Lazy.Text'
 encodeStrLT :: String -> TL.Text
 encodeStrLT = TL.pack
 
--- | Convert Text to String
+-- | Convert 'Text' to 'String'
 decodeStr :: Text -> String
 decodeStr = T.unpack
 
--- | Convert Lazy Text to String
+-- | Convert Lazy 'Data.Text.Lazy.Text' to 'String'
 decodeStrLT :: TL.Text -> String
 decodeStrLT = TL.unpack
 
+-- | isMuNothing x = x == MuNothing
 isMuNothing :: MuType t -> Bool
 isMuNothing MuNothing = True
 isMuNothing _ = False
