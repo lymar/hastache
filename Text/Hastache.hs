@@ -121,7 +121,7 @@ type MuContext m =
     -> m (MuType m) -- ^ Value
 
 class Show a => MuVar a where
-    -- | Convert to Lazy ByteString
+    -- | Convert to Lazy 'Text'
     toLText   :: a -> TL.Text
     -- | Is empty variable (empty string, zero number etc.)
     isEmpty   :: a -> Bool 
