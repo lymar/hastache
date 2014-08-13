@@ -1,3 +1,16 @@
+# 0.6.1
+
+- Fixing documentation typos
+- Implementing basic context merging (see
+  <https://github.com/lymar/hastache/issues/31>)
+- `mkGenericContext'` takes an additional `(String -> String)`
+  argument which is applied to record field names, much like aeson's
+  `fieldLabelModifier`
+- Removing unnecessary `utf8-string` dependency
+
+Thanks to: Tobias Florek, Edsko de Vries, Janne Hellsten, @clinty, and
+others
+
 # 0.6.0
 
 - Switching from lazy ByteString to lazy Text

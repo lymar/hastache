@@ -2,3 +2,8 @@
 /.project
 /.hsproject
 /.dist-scion
+/.cabal-sandbox
+/cabal.sandbox.config
+/*.hi
+/*.o
+/TAGS
