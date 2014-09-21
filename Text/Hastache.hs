@@ -89,7 +89,6 @@ import Control.Monad.Trans.Maybe (MaybeT(MaybeT), runMaybeT)
 import Data.AEq (AEq,(~==))
 import Data.Functor ((<$>))
 import Data.Int
-import Data.IORef
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid, mappend, mempty)
 import Data.Text hiding (map, foldl1)
@@ -99,6 +98,7 @@ import Prelude hiding (putStrLn, readFile, length, drop, tail, dropWhile, elem,
     head, last, reverse, take, span, null)
 import System.Directory (doesFileExist)
 import System.FilePath (combine)
+import Control.Monad.State
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LZ
@@ -315,7 +315,7 @@ findBlock str otag ctag = do
         | otherwise = breakOn ctag fnd ~> \(a,b) -> 
             (drop (length otag) a, drop (length ctag) b)
 
-readVar :: MonadIO m => [MuContext m] -> Text -> m TL.Text
+readVar :: Monad m => [MuContext m] -> Text -> m TL.Text
 readVar [] _ = return TL.empty
 readVar (context:parentCtx) name = do
     muType <- context name
@@ -335,7 +335,7 @@ readInt t = eitherMaybe $ T.decimal t
     eitherMaybe (Left _)  = Nothing
     eitherMaybe (Right x) = Just x
 
-tryFindArrayItem :: MonadIO m => 
+tryFindArrayItem :: Monad m => 
        MuContext m
     -> Text
     -> MaybeT m (MuContext m, Text)
@@ -376,29 +376,25 @@ trimCharsTest = (`Prelude.elem` " \t")
 trimAll :: Text -> Text
 trimAll = dropAround trimCharsTest
 
-addRes :: MonadIO m => (Either T.Text TL.Text) -> ReaderT (IORef TLB.Builder) m ()
+addRes :: Monad m => (Either T.Text TL.Text) -> StateT TLB.Builder m ()
 addRes str = do
-    rf <- ask
-    b <- readIORef rf ~> liftIO
-    let l = mappend b t
-    writeIORef rf l ~> liftIO
-    return ()
+    modify (flip mappend t)
   where
     t = either TLB.fromText TLB.fromLazyText str
 
-addResT :: MonadIO m => T.Text -> ReaderT (IORef TLB.Builder) m ()
+addResT :: Monad m => T.Text -> StateT TLB.Builder m ()
 addResT = addRes . Left
 
-addResTL :: MonadIO m => TL.Text -> ReaderT (IORef TLB.Builder) m ()
+addResTL :: Monad m => TL.Text -> StateT TLB.Builder m ()
 addResTL = addRes . Right
 
-processBlock :: MonadIO m => 
+processBlock :: Monad m => 
        Text 
     -> [MuContext m] 
     -> Text 
     -> Text 
     -> MuConfig m
-    -> ReaderT (IORef TLB.Builder) m ()
+    -> StateT TLB.Builder m ()
 processBlock str contexts otag ctag conf = 
     case findBlock str otag ctag of
         Just (pre, symb, inTag, afterClose) -> do
@@ -411,7 +407,7 @@ processBlock str contexts otag ctag conf =
 elem :: Char -> Text -> Bool
 elem c = isJust . find (==c)
 
-renderBlock :: MonadIO m =>
+renderBlock :: Monad m =>
        [MuContext m] 
     -> Char 
     -> Text 
@@ -419,7 +415,7 @@ renderBlock :: MonadIO m =>
     -> Text
     -> Text 
     -> MuConfig m
-    -> ReaderT (IORef TLB.Builder) m ()
+    -> StateT TLB.Builder m ()
 renderBlock contexts symb inTag afterClose otag ctag conf
     -- comment
     | symb == '!' = next afterClose
@@ -525,7 +521,7 @@ renderBlock contexts symb inTag afterClose otag ctag conf
             then tail t else content
 
 -- | Render Hastache template from 'Text'
-hastacheStr :: (MonadIO m) => 
+hastacheStr :: (Monad m) => 
        MuConfig m       -- ^ Configuration
     -> Text             -- ^ Template
     -> MuContext m      -- ^ Context
@@ -543,15 +539,13 @@ hastacheFile conf file_name context =
     hastacheFileBuilder conf file_name context >>= return . TLB.toLazyText
 
 -- | Render Hastache template from 'Text'
-hastacheStrBuilder :: (MonadIO m) => 
+hastacheStrBuilder :: (Monad m) => 
        MuConfig m       -- ^ Configuration
     -> Text             -- ^ Template
     -> MuContext m      -- ^ Context
     -> m TLB.Builder
-hastacheStrBuilder conf str context = do
-    rf <- newIORef mempty ~> liftIO
-    runReaderT (processBlock str [context] defOTag defCTag conf) rf
-    readIORef rf ~> liftIO
+hastacheStrBuilder conf str context =
+    execStateT (processBlock str [context] defOTag defCTag conf) mempty
 
 -- | Render Hastache template from file
 hastacheFileBuilder :: (MonadIO m) => 
