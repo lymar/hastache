@@ -430,6 +430,20 @@ nestedGenericContextTest = do
         \Nested variable : NESTED_TWO\n\
         \"
 
+-- Nested generic context with polymorphic datatypes
+data Person = Person { personName :: String } deriving (Data, Typeable)
+data Info = Info { person :: Maybe Person } deriving (Data, Typeable)
+data Infos = Infos { infos :: [Info] } deriving (Data, Typeable)
+
+nestedPolyGenericContextTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) context
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
+    where
+    datum = Infos [Info Nothing, Info $ Just $ Person "Dude", Info $ Just $ Person "Dude2"]
+    template = "Greetings: {{#infos}}{{#person}}Hello, {{personName}}!\n{{/person}}{{/infos}}"
+    context = mkGenericContext datum
+    testRes = "Greetings: Hello, Dude!\nHello, Dude2!\n"
+
 -- Accessing array item by index
 arrayItemsTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
@@ -541,6 +555,9 @@ tests = TestList [
     , TestLabel "Nested context test" (TestCase nestedContextTest)
     , TestLabel "Nested generic context test"
                                         (TestCase nestedGenericContextTest)
+
+    , TestLabel "Nested generic context with polymorphic datatypes test"
+                                        (TestCase nestedPolyGenericContextTest)
     , TestLabel "Accessing array item by index" (TestCase arrayItemsTest)
     , TestLabel "Accessing array item by index (generic version)"
         (TestCase arrayItemsTestGeneric)

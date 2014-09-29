@@ -276,11 +276,16 @@ procField f =
     `extQ` muLambdaMBSBS
     `extQ` muLambdaMSS
     `extQ` muLambdaMBSLBS
+    
+    `ext1Q` muMaybe
     where
     obj a = case dataTypeRep (dataTypeOf a) of
         AlgRep (_:_) -> toGenTemp f a
         _ -> TUnknown
     list a = map (procField f) a ~> TList
+
+    muMaybe Nothing = TSimple MuNothing
+    muMaybe (Just a) = TList [procField f a]
 
     muLambdaTT :: (T.Text -> T.Text) -> TD m
     muLambdaTT f = MuLambda f ~> TSimple
