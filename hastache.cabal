@@ -24,6 +24,22 @@ extra-source-files:
     README.md
     ChangeLog
 
+executable mkReadme
+  main-is: mkReadme.hs
+  build-depends: hastache, process,
+    base == 4.*
+    ,bytestring
+    ,mtl
+    ,transformers
+    ,directory
+    ,filepath
+    ,text
+    ,containers
+    ,syb
+    ,blaze-builder
+    ,ieee754
+
+
 library
   exposed-modules:
     Text.Hastache

@@ -62,6 +62,11 @@ Number
 {{#example}}conditionalNumber{{/example}}
 {{#runExample}}conditionalNumber{{/runExample}}
 
+Multiple constructors (in generic context)
+
+{{#example}}genericMultipleConstructors{{/example}}
+{{#runExample}}genericMultipleConstructors{{/runExample}}
+
 #### Functions
 
 {{#example}}function{{/example}}
