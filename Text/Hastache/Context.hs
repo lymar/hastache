@@ -87,6 +87,8 @@ Supported field types:
  
  * Bool
 
+ * Maybe @a@ (where @a@ is a supported datatype)
+
  * Data.Text.Text -> Data.Text.Text
 
  * Data.Text.Text -> Data.Text.Lazy.Text
@@ -278,6 +280,7 @@ procField f =
     `extQ` muLambdaMBSLBS
     
     `ext1Q` muMaybe
+
     where
     obj a = case dataTypeRep (dataTypeOf a) of
         AlgRep (_:_) -> toGenTemp f a
