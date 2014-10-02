@@ -88,12 +88,13 @@ import Control.Monad.Trans (lift, liftIO, MonadIO)
 import Control.Monad.Trans.Maybe (MaybeT(MaybeT), runMaybeT)
 import Data.AEq (AEq,(~==))
 import Data.Functor ((<$>))
-import Data.Int
 import Data.IORef
+import Data.Int
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid, mappend, mempty)
 import Data.Text hiding (map, foldl1)
 import Data.Text.IO
+import Data.Version (Version)
 import Data.Word
 import Prelude hiding (putStrLn, readFile, length, drop, tail, dropWhile, elem,
     head, last, reverse, take, span, null)
@@ -181,7 +182,8 @@ instance MuVar Word32  where {toLText = withShowToText; isEmpty = numEmpty}
 instance MuVar Word64  where {toLText = withShowToText; isEmpty = numEmpty}
 instance MuVar ()      where {toLText = withShowToText}
 
-    
+instance MuVar Version where {toLText = withShowToText }
+
 instance MuVar Char where
     toLText = TL.singleton
 

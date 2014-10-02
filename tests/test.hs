@@ -299,7 +299,8 @@ data SomeData = SomeData {
     someMuLambdaBS      :: BS.ByteString -> BS.ByteString,
     someMuLambdaS       :: String -> String,
     someMuLambdaMBS     :: BS.ByteString -> IO BS.ByteString,
-    someMuLambdaMS      :: String -> IO String
+    someMuLambdaMS      :: String -> IO String,
+    someEitherValue     :: Either String Int
     }
     deriving (Data, Typeable)
 
@@ -329,6 +330,7 @@ genericContextTest = do
         \{{#someMuLambdaS}}upper{{/someMuLambdaS}}\n\
         \{{#someMuLambdaMBS}}reverse in IO lambda{{/someMuLambdaMBS}}\n\
         \{{#someMuLambdaMS}}upper in IO lambda{{/someMuLambdaMS}}\n\
+        \{{someEitherValue}}\n\
         \text 2\n\
         \"
     context = SomeData {
@@ -341,7 +343,8 @@ genericContextTest = do
         someMuLambdaBS = BS.reverse,
         someMuLambdaS = map toUpper,
         someMuLambdaMBS = return . BS.reverse,
-        someMuLambdaMS = return . map toUpper
+        someMuLambdaMS = return . map toUpper,
+        someEitherValue = Right 123
         }
 
     testRes = "\
@@ -362,6 +365,7 @@ genericContextTest = do
         \UPPER\n\
         \adbmal OI ni esrever\n\
         \UPPER IN IO LAMBDA\n\
+        \123\n\
         \text 2\n\
         \"
 

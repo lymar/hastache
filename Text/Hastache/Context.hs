@@ -20,6 +20,8 @@ module Text.Hastache.Context (
 import Data.Data
 import Data.Generics
 import Data.Int
+import Data.Version (Version)
+import Data.Ratio (Ratio)
 import Data.Word
 
 import qualified Data.ByteString as BS
@@ -46,6 +48,8 @@ mkStrContextM f a = decodeStr a ~> f
 Make Hastache context from Data.Data deriving type
 
 Supported field types:
+
+ * ()
 
  * String
  
@@ -87,7 +91,11 @@ Supported field types:
  
  * Bool
 
+ * Version
+
  * Maybe @a@ (where @a@ is a supported datatype)
+
+ * Either @a@ @b@ (where @a@ and @b@ are supported datatypes)
 
  * Data.Text.Text -> Data.Text.Text
 
@@ -264,6 +272,8 @@ procField f =
     `extQ` (\(i::T.Text)            -> MuVariable i ~> TSimple)
     `extQ` (\(i::TL.Text)           -> MuVariable i ~> TSimple)
     `extQ` (\(i::Bool)              -> MuBool i     ~> TSimple)
+    `extQ` (\()                     -> MuVariable () ~> TSimple)
+    `extQ` (\(i::Version)           -> MuVariable i ~> TSimple)
 
     `extQ` muLambdaTT
     `extQ` muLambdaTTL
@@ -280,6 +290,7 @@ procField f =
     `extQ` muLambdaMBSLBS
     
     `ext1Q` muMaybe
+    `ext2Q` muEither 
 
     where
     obj a = case dataTypeRep (dataTypeOf a) of
@@ -289,6 +300,9 @@ procField f =
 
     muMaybe Nothing = TSimple MuNothing
     muMaybe (Just a) = TList [procField f a]
+
+    muEither (Left a) = procField f a
+    muEither (Right b) = procField f b
 
     muLambdaTT :: (T.Text -> T.Text) -> TD m
     muLambdaTT f = MuLambda f ~> TSimple

@@ -8,8 +8,8 @@
   `fieldLabelModifier`
 - Removing unnecessary `utf8-string` dependency
 - Implementing the generic context creation for `Maybe` (see
-	<https://github.com/lymar/hastache/issues/38> and
-	`nestedPolyGenericContextTest` test)
+  <https://github.com/lymar/hastache/issues/38> and
+  `nestedPolyGenericContextTest` test), `Either`, `()`, and `Version`.
 - `mkReadme` is now officially an executable
 
 Thanks to: Tobias Florek, Edsko de Vries, Janne Hellsten, @clinty,
