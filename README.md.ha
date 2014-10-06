@@ -79,6 +79,13 @@ Multiple constructors (in generic context)
 
 {{#runExample}}monadicFunction{{/runExample}}
 
+#### Custom queries and field renaming
+
+{{#example}}genericCustom{{/example}}
+
+{{#runExample}}genericCustom{{/runExample}}
+
+
 #### Generics big example
 
 {{#example}}genericsBig{{/example}}

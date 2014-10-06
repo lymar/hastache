@@ -448,6 +448,23 @@ nestedPolyGenericContextTest = do
     context = mkGenericContext datum
     testRes = "Greetings: Hello, Dude!\nHello, Dude2!\n"
 
+-- Generic context with custom extension
+data MyData = MyData Int deriving (Data, Typeable)
+data TestInfo = TestInfo {n::Int,m::MyData} deriving (Data, Typeable)
+
+testExt :: Ext
+testExt = defaultExt `extQ` (\(MyData i) -> "Data " ++ show i)
+
+genericExtTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) context
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
+    where
+    datum = TestInfo 1 (MyData 0)
+    template = "{{n}}\n{{m.MyData}}"
+    context = mkGenericContext' id testExt datum
+    testRes = "1\nData 0"
+
+
 -- Accessing array item by index
 arrayItemsTest = do
     res <- hastacheStr defaultConfig (encodeStr template)
@@ -566,6 +583,7 @@ tests = TestList [
     , TestLabel "Accessing array item by index (generic version)"
         (TestCase arrayItemsTestGeneric)
     , TestLabel "Composing contexts" (TestCase compositionTest)
+    , TestLabel "Generic contexts with custom extensions" (TestCase genericExtTest)
     ]
 
 main = do
