@@ -373,7 +373,7 @@ findCloseSection str name otag ctag = do
     (before, after) = breakOn close str
 
 trimCharsTest :: Char -> Bool
-trimCharsTest = (`Prelude.elem` " \t")
+trimCharsTest = (`Prelude.elem` [' ', '\t'])
 
 trimAll :: Text -> Text
 trimAll = dropAround trimCharsTest
