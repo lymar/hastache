@@ -14,9 +14,10 @@
 - Big change: custom extensions for generic contexts (should solve
   #30). See the documentation for `Text.Hastache.Context` and the
   `genericCustom.hs` example.
+- Making Hastache work with new base-4.8 (see #41)
 
 Thanks to: Tobias Florek, Edsko de Vries, Janne Hellsten, @clinty,
-Stefan Kersten, and others
+Stefan Kersten, Herbert Valerio Riedel, and others
 
 # 0.6.0
 
