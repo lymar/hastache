@@ -130,7 +130,7 @@ instance (Monad m) => Monoid (MuContext m) where
             MuNothing -> b v
             _ -> return x
 
--- | Left-leaning compoistion of contexts. Given contexts @c1@ and
+-- | Left-leaning composition of contexts. Given contexts @c1@ and
 -- @c2@, the behaviour of @(c1 <> c2) x@ is following: if @c1 x@
 -- produces 'MuNothing', then the result is @c2 x@. Otherwise the
 -- result is @c1 x@. Even if @c1 x@ is 'MuNothing', the monadic
