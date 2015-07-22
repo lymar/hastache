@@ -299,7 +299,8 @@ data SomeData = SomeData {
     someMuLambdaBS      :: BS.ByteString -> BS.ByteString,
     someMuLambdaS       :: String -> String,
     someMuLambdaMBS     :: BS.ByteString -> IO BS.ByteString,
-    someMuLambdaMS      :: String -> IO String
+    someMuLambdaMS      :: String -> IO String,
+    someEitherValue     :: Either String Int
     }
     deriving (Data, Typeable)
 
@@ -329,6 +330,7 @@ genericContextTest = do
         \{{#someMuLambdaS}}upper{{/someMuLambdaS}}\n\
         \{{#someMuLambdaMBS}}reverse in IO lambda{{/someMuLambdaMBS}}\n\
         \{{#someMuLambdaMS}}upper in IO lambda{{/someMuLambdaMS}}\n\
+        \{{someEitherValue}}\n\
         \text 2\n\
         \"
     context = SomeData {
@@ -341,7 +343,8 @@ genericContextTest = do
         someMuLambdaBS = BS.reverse,
         someMuLambdaS = map toUpper,
         someMuLambdaMBS = return . BS.reverse,
-        someMuLambdaMS = return . map toUpper
+        someMuLambdaMS = return . map toUpper,
+        someEitherValue = Right 123
         }
 
     testRes = "\
@@ -362,6 +365,7 @@ genericContextTest = do
         \UPPER\n\
         \adbmal OI ni esrever\n\
         \UPPER IN IO LAMBDA\n\
+        \123\n\
         \text 2\n\
         \"
 
@@ -429,6 +433,37 @@ nestedGenericContextTest = do
         \Top variable : TOP\n\
         \Nested variable : NESTED_TWO\n\
         \"
+
+-- Nested generic context with polymorphic datatypes
+data Person = Person { personName :: String } deriving (Data, Typeable)
+data Info = Info { person :: Maybe Person } deriving (Data, Typeable)
+data Infos = Infos { infos :: [Info] } deriving (Data, Typeable)
+
+nestedPolyGenericContextTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) context
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
+    where
+    datum = Infos [Info Nothing, Info $ Just $ Person "Dude", Info $ Just $ Person "Dude2"]
+    template = "Greetings: {{#infos}}{{#person}}Hello, {{personName}}!\n{{/person}}{{/infos}}"
+    context = mkGenericContext datum
+    testRes = "Greetings: Hello, Dude!\nHello, Dude2!\n"
+
+-- Generic context with custom extension
+data MyData = MyData Int deriving (Data, Typeable)
+data TestInfo = TestInfo {n::Int,m::MyData} deriving (Data, Typeable)
+
+testExt :: Ext
+testExt = defaultExt `extQ` (\(MyData i) -> "Data " ++ show i)
+
+genericExtTest = do
+    res <- hastacheStr defaultConfig (encodeStr template) context
+    assertEqualStr resCorrectness (decodeStrLT res) testRes
+    where
+    datum = TestInfo 1 (MyData 0)
+    template = "{{n}}\n{{m.MyData}}"
+    context = mkGenericContext' id testExt datum
+    testRes = "1\nData 0"
+
 
 -- Accessing array item by index
 arrayItemsTest = do
@@ -541,10 +576,14 @@ tests = TestList [
     , TestLabel "Nested context test" (TestCase nestedContextTest)
     , TestLabel "Nested generic context test"
                                         (TestCase nestedGenericContextTest)
+
+    , TestLabel "Nested generic context with polymorphic datatypes test"
+                                        (TestCase nestedPolyGenericContextTest)
     , TestLabel "Accessing array item by index" (TestCase arrayItemsTest)
     , TestLabel "Accessing array item by index (generic version)"
         (TestCase arrayItemsTestGeneric)
     , TestLabel "Composing contexts" (TestCase compositionTest)
+    , TestLabel "Generic contexts with custom extensions" (TestCase genericExtTest)
     ]
 
 main = do

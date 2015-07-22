@@ -24,13 +24,29 @@ extra-source-files:
     README.md
     ChangeLog
 
+executable mkReadme
+  main-is: mkReadme.hs
+  build-depends: hastache, process,
+    base >=4 && <4.9
+    ,bytestring
+    ,mtl
+    ,transformers
+    ,directory
+    ,filepath
+    ,text
+    ,containers
+    ,syb
+    ,blaze-builder
+    ,ieee754
+
+
 library
   exposed-modules:
     Text.Hastache
     Text.Hastache.Context
 
   build-depends:
-    base == 4.*
+    base >=4.4 && <4.9
     ,bytestring
     ,mtl
     ,transformers
@@ -53,7 +69,7 @@ test-suite test-hastache
 
   build-depends:
     hastache
-   ,base == 4.*
+   ,base >=4.4 && <4.9
    ,directory
    ,mtl
    ,HUnit

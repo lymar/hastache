@@ -93,6 +93,7 @@ import Data.Maybe (isJust)
 import Data.Monoid (Monoid, mappend, mempty)
 import Data.Text hiding (map, foldl1)
 import Data.Text.IO
+import Data.Version (Version)
 import Data.Word
 import Prelude hiding (putStrLn, readFile, length, drop, tail, dropWhile, elem,
     head, last, reverse, take, span, null)
@@ -181,7 +182,8 @@ instance MuVar Word32  where {toLText = withShowToText; isEmpty = numEmpty}
 instance MuVar Word64  where {toLText = withShowToText; isEmpty = numEmpty}
 instance MuVar ()      where {toLText = withShowToText}
 
-    
+instance MuVar Version where {toLText = withShowToText }
+
 instance MuVar Char where
     toLText = TL.singleton
 
@@ -371,7 +373,7 @@ findCloseSection str name otag ctag = do
     (before, after) = breakOn close str
 
 trimCharsTest :: Char -> Bool
-trimCharsTest = (`Prelude.elem` " \t")
+trimCharsTest = (`Prelude.elem` [' ', '\t'])
 
 trimAll :: Text -> Text
 trimAll = dropAround trimCharsTest

@@ -62,6 +62,11 @@ Number
 {{#example}}conditionalNumber{{/example}}
 {{#runExample}}conditionalNumber{{/runExample}}
 
+Multiple constructors (in generic context)
+
+{{#example}}genericMultipleConstructors{{/example}}
+{{#runExample}}genericMultipleConstructors{{/runExample}}
+
 #### Functions
 
 {{#example}}function{{/example}}
@@ -73,6 +78,13 @@ Number
 {{#example}}monadicFunction{{/example}}
 
 {{#runExample}}monadicFunction{{/runExample}}
+
+#### Custom queries and field renaming
+
+{{#example}}genericCustom{{/example}}
+
+{{#runExample}}genericCustom{{/runExample}}
+
 
 #### Generics big example
 

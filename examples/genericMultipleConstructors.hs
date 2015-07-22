@@ -1,12 +1,12 @@
 #!/usr/local/bin/runhaskell
 -- | Multiple constructors in generic contexts
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE OverloadedStrings  #-}
 import           Data.Data
 import           Data.Monoid
 import           Data.Typeable                 ()
 
+import qualified Data.Text.Lazy    as TL
 import qualified Data.Text.Lazy.IO as TL
 import           Text.Hastache
 import           Text.Hastache.Context
@@ -19,9 +19,6 @@ data Hero = SuperHero { name      :: String
                       , minion :: String
                       }
           deriving (Show, Data, Typeable)
-
-data SimpleHero = SimpleHero { simpleName :: String }
-                deriving (Show, Data, Typeable)
 
 template :: String
 template = mconcat [
@@ -43,12 +40,5 @@ render = hastacheStr defaultConfig (encodeStr template)
 main :: IO ()
 main = do let batman = SuperHero "Batman" ["ht","ht"] "Robin"
           let doctorEvil = EvilHero "Doctor Evil" "Mini-Me"
-          putStrLn "\n------ batman"
-          print batman
-          putStrLn "--------------------------"
-          render batman     >>= TL.putStrLn
-
-          putStrLn "\n------ doctorEvil"
-          print doctorEvil
-          putStrLn "--------------------------"
+          render batman >>= TL.putStrLn
           render doctorEvil >>= TL.putStrLn
