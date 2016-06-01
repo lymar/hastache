@@ -1,5 +1,7 @@
 # Hastache
 
+**This library has been deprecated in favour of `mustache`: <https://hackage.haskell.org/package/mustache>**
+
 Haskell implementation of [Mustache templates](http://mustache.github.com/)
 
 ## Installation
