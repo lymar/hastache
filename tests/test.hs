@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import Control.Monad
@@ -541,7 +542,7 @@ multipleConstrTest = do
 -- Context composition
 compositionTest = do
     res <- hastacheStr defaultConfig (encodeStr template) $
-        mkGenericContext context 
+        mkGenericContext context
         `composeCtx` mempty
         `composeCtx` mkStrContext context2
 
@@ -572,7 +573,7 @@ tests = TestList [
     , TestLabel "Partials test" (TestCase partialsTest)
     , TestLabel "Generic context test" (TestCase genericContextTest)
     , TestLabel "Multiple constructors in a generic context"
-        (TestCase multipleConstrTest)    
+        (TestCase multipleConstrTest)
     , TestLabel "Nested context test" (TestCase nestedContextTest)
     , TestLabel "Nested generic context test"
                                         (TestCase nestedGenericContextTest)
