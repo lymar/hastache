@@ -1,5 +1,5 @@
 {-# LANGUAGE ExistentialQuantification, FlexibleInstances, IncoherentInstances,
-             OverloadedStrings #-}
+             OverloadedStrings, CPP #-}
 -- Module:      Text.Hastache
 -- Copyright:   Sergey S Lymar (c) 2011-2013 
 -- License:     BSD3
@@ -122,6 +122,17 @@ type MuContext m =
     Text            -- ^ Variable name
     -> m (MuType m) -- ^ Value
 
+#if (MIN_VERSION_base(4,11,0))
+instance (Monad m) => Semigroup (MuContext m) where
+    (<>) a b = \v -> do
+        x <- a v
+        case x of
+            MuNothing -> b v
+            _ -> return x
+instance (Monad m) => Monoid (MuContext m) where
+    mempty = const $ return MuNothing
+    mappend = (<>)
+#else
 instance (Monad m) => Monoid (MuContext m) where
     mempty = const $ return MuNothing
     a `mappend` b = \v -> do
@@ -129,6 +140,8 @@ instance (Monad m) => Monoid (MuContext m) where
         case x of
             MuNothing -> b v
             _ -> return x
+#endif
+
 
 -- | Left-leaning composition of contexts. Given contexts @c1@ and
 -- @c2@, the behaviour of @(c1 <> c2) x@ is following: if @c1 x@
