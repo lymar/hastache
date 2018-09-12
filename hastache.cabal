@@ -27,7 +27,7 @@ extra-source-files:
 executable mkReadme
   main-is: mkReadme.hs
   build-depends: hastache, process,
-    base >=4 && <4.9
+    base >=4 && <5
     ,bytestring
     ,mtl
     ,transformers
@@ -41,12 +41,14 @@ executable mkReadme
 
 
 library
+  hs-source-dirs: src
+
   exposed-modules:
     Text.Hastache
     Text.Hastache.Context
 
   build-depends:
-    base >=4.4 && <4.9
+    base >=4.4 && <5
     ,bytestring
     ,mtl
     ,transformers
@@ -69,7 +71,7 @@ test-suite test-hastache
 
   build-depends:
     hastache
-   ,base >=4.4 && <4.9
+   ,base >=4.4 && <5
    ,directory
    ,mtl
    ,HUnit
