@@ -1,7 +1,7 @@
-{-# LANGUAGE ExistentialQuantification, FlexibleInstances, IncoherentInstances,
+{-# LANGUAGE CPP, ExistentialQuantification, FlexibleInstances, IncoherentInstances,
              OverloadedStrings #-}
 -- Module:      Text.Hastache
--- Copyright:   Sergey S Lymar (c) 2011-2013 
+-- Copyright:   Sergey S Lymar (c) 2011-2013
 -- License:     BSD3
 -- Maintainer:  Sergey S Lymar <sergey.lymar@gmail.com>
 -- Stability:   experimental
@@ -121,6 +121,15 @@ infixl 9 ~>
 type MuContext m =
     Text            -- ^ Variable name
     -> m (MuType m) -- ^ Value
+
+#if MIN_VERSION_base(4,11,0)
+instance (Monad m) => Semigroup (MuContext m) where
+    a <> b = \v -> do
+        x <- a v
+        case x of
+            MuNothing -> b v
+            _ -> return x
+#endif
 
 instance (Monad m) => Monoid (MuContext m) where
     mempty = const $ return MuNothing
